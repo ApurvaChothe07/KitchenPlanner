@@ -6,6 +6,7 @@ import {
   clampWithinRoom,
   isCabinetColliding,
   findCollisions,
+  to3DCoordinates,
   PREDEFINED_CABINETS
 } from './coordinates.js';
 
@@ -66,5 +67,30 @@ for (const cat of PREDEFINED_CABINETS) {
   }
 }
 console.log('✓ Predefined architectural catalogue integrity verified');
+
+// 7. 2D to 3D Coordinate Mapping Verification
+// Room: 4000mm (4m) width, 3000mm (3m) length
+// Cabinet at (0, 0) with width 600mm, depth 600mm, height 860mm, posZ 0
+const cornerCab = {
+  posX: 0,
+  posY: 0,
+  posZ: 0,
+  widthMm: 600,
+  depthMm: 600,
+  heightMm: 860,
+  rotation: 0
+};
+const res3D = to3DCoordinates(cornerCab, 4000, 3000);
+
+// X center: (0 + 300) / 1000 - 4/2 = 0.3 - 2.0 = -1.7 m
+// Y center: (0 + 430) / 1000 = 0.43 m
+// Z center: (0 + 300) / 1000 - 3/2 = 0.3 - 1.5 = -1.2 m
+assert.strictEqual(Math.round(res3D.position[0] * 100) / 100, -1.7, '3D X should be -1.7m');
+assert.strictEqual(Math.round(res3D.position[1] * 100) / 100, 0.43, '3D Y should be 0.43m (half height above floor)');
+assert.strictEqual(Math.round(res3D.position[2] * 100) / 100, -1.2, '3D Z should be -1.2m');
+assert.strictEqual(res3D.dimensions[0], 0.6, '3D width should be 0.6m');
+assert.strictEqual(res3D.dimensions[1], 0.86, '3D height should be 0.86m');
+assert.strictEqual(res3D.dimensions[2], 0.6, '3D depth should be 0.6m');
+console.log('✓ 2D to 3D metric coordinate and centering transform verified');
 
 console.log('\nALL 2D COORDINATE AND COLLISION TESTS PASSED SUCCESSFULLY!');

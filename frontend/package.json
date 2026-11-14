@@ -10,13 +10,16 @@
     "postinstall": "node -e \"const fs=require('fs');const p1='node_modules/@rollup/wasm-node/dist',p2='node_modules/rollup/dist';if(fs.existsSync(p1)&&fs.existsSync(p2)){fs.cpSync(p1,p2,{recursive:true});}\""
   },
   "dependencies": {
+    "@react-three/drei": "^9.122.0",
+    "@react-three/fiber": "^8.18.0",
     "@rollup/wasm-node": "^4.68.3",
     "axios": "^1.7.7",
     "konva": "^9.3.18",
     "lucide-react": "^0.460.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
-    "react-konva": "^18.2.10"
+    "react-konva": "^18.2.10",
+    "three": "^0.187.0"
   },
   "devDependencies": {
     "@types/react": "^18.3.12",

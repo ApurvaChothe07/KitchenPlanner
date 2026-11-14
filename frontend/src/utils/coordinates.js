@@ -59,6 +59,39 @@ export const findCollisions = (targetCabinet, allCabinets) => {
   return allCabinets.filter(other => isCabinetColliding(targetCabinet, other));
 };
 
+/**
+ * 2D (mm, top-left room origin) to 3D (metres, centered room origin) Coordinate Transform
+ * Converts millimeter cabinet position and dimensions into centered Three.js world space coordinates.
+ */
+export const to3DCoordinates = (cabinet, roomWidthMm, roomLengthMm) => {
+  const roomWm = roomWidthMm / 1000;
+  const roomLm = roomLengthMm / 1000;
+
+  // Convert dimensions from mm to metres
+  const widthM = cabinet.widthMm / 1000;
+  const depthM = cabinet.depthMm / 1000;
+  const heightM = cabinet.heightMm / 1000;
+
+  // 2D center point in mm from top-left room origin
+  const centerXMm = cabinet.posX + cabinet.widthMm / 2;
+  const centerYMm = cabinet.posY + cabinet.depthMm / 2;
+  const centerZElevationMm = (cabinet.posZ || 0) + cabinet.heightMm / 2;
+
+  // Transform to 3D world space in metres (room centered on X and Z, Y sits on floor = 0)
+  const x = centerXMm / 1000 - roomWm / 2;
+  const y = centerZElevationMm / 1000;
+  const z = centerYMm / 1000 - roomLm / 2;
+
+  // Rotation around vertical Y axis in radians
+  const rotationY = -((cabinet.rotation || 0) * Math.PI) / 180;
+
+  return {
+    position: [x, y, z],
+    dimensions: [widthM, heightM, depthM],
+    rotationY
+  };
+};
+
 // Predefined Modular Cabinet Catalog (Standard architectural mm dimensions)
 export const PREDEFINED_CABINETS = [
   {

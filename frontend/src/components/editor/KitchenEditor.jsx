@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { KitchenCanvas } from '../canvas/KitchenCanvas';
+import { KitchenScene3D } from '../canvas3d/KitchenScene3D';
 import { CabinetCatalogPanel } from './CabinetCatalogPanel';
 import { CabinetInspectorPanel } from './CabinetInspectorPanel';
 import { RoomDimensionsPanel } from './RoomDimensionsPanel';
@@ -25,6 +26,7 @@ export const KitchenEditor = ({
     cabinets: []
   });
 
+  const [viewMode, setViewMode] = useState('2D'); // '2D' | '3D'
   const [selectedCabinetId, setSelectedCabinetId] = useState(null);
   const [deletedCabinetIds, setDeletedCabinetIds] = useState([]);
   const [isDirty, setIsDirty] = useState(false);
@@ -263,6 +265,8 @@ export const KitchenEditor = ({
         isDirty={isDirty}
         saveStatus={saveStatus}
         errorMessage={errorMessage}
+        viewMode={viewMode}
+        onChangeViewMode={setViewMode}
         onSave={handleSave}
         onReload={loadDesign}
         onBackToProjects={onBackToProjects}
@@ -283,16 +287,28 @@ export const KitchenEditor = ({
         {/* Left: Cabinet Catalogue */}
         <CabinetCatalogPanel onAddCabinet={handleAddCabinet} />
 
-        {/* Center: Interactive 2D Konva Canvas */}
+        {/* Center: Interactive Viewport (2D Konva or 3D React Three Fiber) */}
         <div className="flex-1 h-full relative">
-          <KitchenCanvas
-            roomWidthMm={design.roomWidthMm}
-            roomLengthMm={design.roomLengthMm}
-            cabinets={design.cabinets}
-            selectedCabinetId={selectedCabinetId}
-            onSelectCabinet={setSelectedCabinetId}
-            onMoveCabinet={handleMoveCabinet}
-          />
+          {viewMode === '2D' ? (
+            <KitchenCanvas
+              roomWidthMm={design.roomWidthMm}
+              roomLengthMm={design.roomLengthMm}
+              cabinets={design.cabinets}
+              selectedCabinetId={selectedCabinetId}
+              onSelectCabinet={setSelectedCabinetId}
+              onMoveCabinet={handleMoveCabinet}
+            />
+          ) : (
+            <KitchenScene3D
+              roomWidthMm={design.roomWidthMm}
+              roomLengthMm={design.roomLengthMm}
+              roomHeightMm={design.roomHeightMm}
+              cabinets={design.cabinets}
+              selectedCabinetId={selectedCabinetId}
+              onSelectCabinet={setSelectedCabinetId}
+              onFallbackTo2D={() => setViewMode('2D')}
+            />
+          )}
         </div>
 
         {/* Right: Selected Cabinet Properties Inspector */}

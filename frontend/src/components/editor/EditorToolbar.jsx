@@ -1,5 +1,5 @@
 import React from 'react';
-import { Save, RefreshCw, ArrowLeft, CheckCircle2, AlertCircle, Clock } from 'lucide-react';
+import { Save, RefreshCw, ArrowLeft, CheckCircle2, AlertCircle, Clock, Layers, Box } from 'lucide-react';
 
 export const EditorToolbar = ({
   projectName,
@@ -7,6 +7,8 @@ export const EditorToolbar = ({
   isDirty,
   saveStatus,
   errorMessage,
+  viewMode = '2D',
+  onChangeViewMode,
   onSave,
   onReload,
   onBackToProjects
@@ -35,35 +37,64 @@ export const EditorToolbar = ({
         </div>
       </div>
 
-      {/* Middle: Save / Sync Status Indicator */}
-      <div className="flex items-center space-x-2">
-        {saveStatus === 'saving' && (
-          <div className="flex items-center space-x-1.5 text-xs text-sky-400 bg-sky-950/40 border border-sky-800 px-2.5 py-1 rounded-full animate-pulse">
-            <RefreshCw className="w-3.5 h-3.5 animate-spin" />
-            <span>Saving layout...</span>
-          </div>
-        )}
+      {/* Middle: 2D / 3D View Switcher & Status */}
+      <div className="flex items-center space-x-4">
+        {/* Mode Switcher */}
+        <div className="flex items-center bg-slate-800 p-0.5 rounded-xl border border-slate-700/80">
+          <button
+            onClick={() => onChangeViewMode('2D')}
+            className={`flex items-center space-x-1.5 px-3 py-1 rounded-lg text-xs font-semibold transition ${
+              viewMode === '2D'
+                ? 'bg-brand-600 text-white shadow-sm'
+                : 'text-slate-400 hover:text-slate-200'
+            }`}
+          >
+            <Layers className="w-3.5 h-3.5" />
+            <span>2D Plan</span>
+          </button>
+          <button
+            onClick={() => onChangeViewMode('3D')}
+            className={`flex items-center space-x-1.5 px-3 py-1 rounded-lg text-xs font-semibold transition ${
+              viewMode === '3D'
+                ? 'bg-brand-600 text-white shadow-sm'
+                : 'text-slate-400 hover:text-slate-200'
+            }`}
+          >
+            <Box className="w-3.5 h-3.5" />
+            <span>3D View</span>
+          </button>
+        </div>
 
-        {saveStatus === 'saved' && !isDirty && (
-          <div className="flex items-center space-x-1.5 text-xs text-brand-400 bg-brand-950/40 border border-brand-800 px-2.5 py-1 rounded-full">
-            <CheckCircle2 className="w-3.5 h-3.5 text-brand-400" />
-            <span>All changes saved to PostgreSQL</span>
-          </div>
-        )}
+        {/* Sync Status Indicator */}
+        <div className="hidden sm:flex items-center space-x-2">
+          {saveStatus === 'saving' && (
+            <div className="flex items-center space-x-1.5 text-xs text-sky-400 bg-sky-950/40 border border-sky-800 px-2.5 py-1 rounded-full animate-pulse">
+              <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+              <span>Saving layout...</span>
+            </div>
+          )}
 
-        {isDirty && saveStatus !== 'saving' && (
-          <div className="flex items-center space-x-1.5 text-xs text-amber-400 bg-amber-950/40 border border-amber-800 px-2.5 py-1 rounded-full">
-            <Clock className="w-3.5 h-3.5" />
-            <span>Unsaved changes</span>
-          </div>
-        )}
+          {saveStatus === 'saved' && !isDirty && (
+            <div className="flex items-center space-x-1.5 text-xs text-brand-400 bg-brand-950/40 border border-brand-800 px-2.5 py-1 rounded-full">
+              <CheckCircle2 className="w-3.5 h-3.5 text-brand-400" />
+              <span>All changes saved</span>
+            </div>
+          )}
 
-        {saveStatus === 'error' && (
-          <div className="flex items-center space-x-1.5 text-xs text-red-400 bg-red-950/40 border border-red-800 px-2.5 py-1 rounded-full">
-            <AlertCircle className="w-3.5 h-3.5" />
-            <span>{errorMessage || 'Error saving design'}</span>
-          </div>
-        )}
+          {isDirty && saveStatus !== 'saving' && (
+            <div className="flex items-center space-x-1.5 text-xs text-amber-400 bg-amber-950/40 border border-amber-800 px-2.5 py-1 rounded-full">
+              <Clock className="w-3.5 h-3.5" />
+              <span>Unsaved changes</span>
+            </div>
+          )}
+
+          {saveStatus === 'error' && (
+            <div className="flex items-center space-x-1.5 text-xs text-red-400 bg-red-950/40 border border-red-800 px-2.5 py-1 rounded-full">
+              <AlertCircle className="w-3.5 h-3.5" />
+              <span>{errorMessage || 'Error saving design'}</span>
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Right: Actions */}
