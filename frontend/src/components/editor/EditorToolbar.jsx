@@ -1,5 +1,5 @@
 import React from 'react';
-import { Save, RefreshCw, ArrowLeft, CheckCircle2, AlertCircle, Clock, Layers, Box } from 'lucide-react';
+import { Save, RefreshCw, ArrowLeft, CheckCircle2, AlertCircle, Clock, Layers, Box, Calculator, GitCompare } from 'lucide-react';
 
 export const EditorToolbar = ({
   projectName,
@@ -11,7 +11,9 @@ export const EditorToolbar = ({
   onChangeViewMode,
   onSave,
   onReload,
-  onBackToProjects
+  onBackToProjects,
+  onOpenEstimate,
+  onOpenComparison
 }) => {
   return (
     <header className="h-14 bg-slate-900 border-b border-slate-800 px-4 flex items-center justify-between z-10">
@@ -100,6 +102,26 @@ export const EditorToolbar = ({
       {/* Right: Actions */}
       <div className="flex items-center space-x-2">
         <button
+          onClick={onOpenEstimate}
+          className="flex items-center space-x-1.5 bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-300 border border-emerald-500/30 px-3 py-1.5 rounded-lg text-xs font-medium transition"
+          title="Calculate Itemized BOM Cost Estimate"
+        >
+          <Calculator className="w-3.5 h-3.5 text-emerald-400" />
+          <span className="hidden md:inline">Cost Estimate</span>
+        </button>
+
+        <button
+          onClick={onOpenComparison}
+          className="flex items-center space-x-1.5 bg-indigo-600/20 hover:bg-indigo-600/30 text-indigo-300 border border-indigo-500/30 px-3 py-1.5 rounded-lg text-xs font-medium transition"
+          title="Compare Material Options & Price Variance"
+        >
+          <GitCompare className="w-3.5 h-3.5 text-indigo-400" />
+          <span className="hidden md:inline">Compare Finishes</span>
+        </button>
+
+        <div className="h-5 w-px bg-slate-800 hidden md:block" />
+
+        <button
           onClick={onReload}
           className="flex items-center space-x-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 px-3 py-1.5 rounded-lg text-xs font-medium border border-slate-700 transition"
           title="Reload latest from database"
@@ -120,3 +142,4 @@ export const EditorToolbar = ({
     </header>
   );
 };
+

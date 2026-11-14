@@ -5,6 +5,8 @@ import { CabinetCatalogPanel } from './CabinetCatalogPanel';
 import { CabinetInspectorPanel } from './CabinetInspectorPanel';
 import { RoomDimensionsPanel } from './RoomDimensionsPanel';
 import { EditorToolbar } from './EditorToolbar';
+import { EstimateModal } from '../estimate/EstimateModal';
+import { ComparisonModal } from '../estimate/ComparisonModal';
 import { designService } from '../../services/designService';
 import { clampWithinRoom, isCabinetColliding } from '../../utils/coordinates';
 import { AlertCircle } from 'lucide-react';
@@ -32,6 +34,10 @@ export const KitchenEditor = ({
   const [isDirty, setIsDirty] = useState(false);
   const [saveStatus, setSaveStatus] = useState('idle'); // 'idle' | 'saving' | 'saved' | 'error'
   const [errorMessage, setErrorMessage] = useState('');
+
+  // Cost Estimation & Comparison Modals
+  const [isEstimateOpen, setIsEstimateOpen] = useState(false);
+  const [isComparisonOpen, setIsComparisonOpen] = useState(false);
 
   // Unsaved changes warning
   useEffect(() => {
@@ -270,6 +276,8 @@ export const KitchenEditor = ({
         onSave={handleSave}
         onReload={loadDesign}
         onBackToProjects={onBackToProjects}
+        onOpenEstimate={() => setIsEstimateOpen(true)}
+        onOpenComparison={() => setIsComparisonOpen(true)}
       />
 
       {/* Room Dimensions Bar */}
@@ -321,6 +329,20 @@ export const KitchenEditor = ({
           onDeselect={() => setSelectedCabinetId(null)}
         />
       </div>
+
+      {/* Cost Estimation Modal */}
+      <EstimateModal
+        designId={design.id}
+        isOpen={isEstimateOpen}
+        onClose={() => setIsEstimateOpen(false)}
+      />
+
+      {/* Material & Cost Comparison Modal */}
+      <ComparisonModal
+        designId={design.id}
+        isOpen={isComparisonOpen}
+        onClose={() => setIsComparisonOpen(false)}
+      />
     </div>
   );
 };
