@@ -340,4 +340,98 @@ class CostEstimationServiceTest {
         );
         assertThat(comparison.getPercentageDifference()).isGreaterThan(BigDecimal.ZERO);
     }
+
+    @Test
+    @DisplayName("Should accurately estimate complex layout with TALL, CORNER, DRAWER, SINK, HOB, and wide WALL units")
+    void shouldCalculateComplexMultiCabinetKitchen() {
+        // 1. Tall Cabinet (600x600x2100)
+        DesignCabinet tallCab = DesignCabinet.builder()
+                .id(1L).design(testDesign).cabinetType(CabinetType.TALL)
+                .widthMm(600).depthMm(600).heightMm(2100).build();
+
+        // 2. Corner Base (900x900x870)
+        DesignCabinet cornerCab = DesignCabinet.builder()
+                .id(2L).design(testDesign).cabinetType(CabinetType.CORNER)
+                .widthMm(900).depthMm(900).heightMm(870).build();
+
+        // 3. Drawer Base (600x600x870)
+        DesignCabinet drawerCab = DesignCabinet.builder()
+                .id(3L).design(testDesign).cabinetType(CabinetType.DRAWER_BASE)
+                .widthMm(600).depthMm(600).heightMm(870).build();
+
+        // 4. Sink Base (800x600x870)
+        DesignCabinet sinkCab = DesignCabinet.builder()
+                .id(4L).design(testDesign).cabinetType(CabinetType.SINK_BASE)
+                .widthMm(800).depthMm(600).heightMm(870).build();
+
+        // 5. Hob Base (800x600x870)
+        DesignCabinet hobCab = DesignCabinet.builder()
+                .id(5L).design(testDesign).cabinetType(CabinetType.HOB_BASE)
+                .widthMm(800).depthMm(600).heightMm(870).build();
+
+        // 6. Wide Wall Unit (900x350x720) - trigger bi-fold lift-up system
+        DesignCabinet wideWallCab = DesignCabinet.builder()
+                .id(6L).design(testDesign).cabinetType(CabinetType.WALL)
+                .widthMm(900).depthMm(350).heightMm(720).build();
+
+        testDesign.getCabinets().addAll(List.of(tallCab, cornerCab, drawerCab, sinkCab, hobCab, wideWallCab));
+
+        when(userRepository.findByEmail(testUser.getEmail())).thenReturn(Optional.of(testUser));
+        when(designRepository.findById(100L)).thenReturn(Optional.of(testDesign));
+        setupDefaultMaterials();
+
+        EstimateRequest request = EstimateRequest.builder()
+                .wastagePercentage(new BigDecimal("12.00"))
+                .laborPercentage(new BigDecimal("18.00"))
+                .installationPercentage(new BigDecimal("6.00"))
+                .taxPercentage(new BigDecimal("18.00"))
+                .build();
+
+        CostEstimateResponse response = costEstimationService.calculateEstimate(100L, request, testUser.getEmail());
+
+        assertThat(response).isNotNull();
+        assertThat(response.getTotalCabinetCount()).isEqualTo(6);
+
+        // Verify that hardware breakdown includes sinks, hobs, and lift-up systems
+        boolean hasSink = response.getLineItems().stream().anyMatch(i -> i.getItemDescription().contains("Sink"));
+        boolean hasHob = response.getLineItems().stream().anyMatch(i -> i.getItemDescription().contains("Hob"));
+        boolean hasLiftUp = response.getLineItems().stream().anyMatch(i -> i.getItemDescription().contains("Lift-Up"));
+
+        assertThat(hasSink).isTrue();
+        assertThat(hasHob).isTrue();
+        assertThat(hasLiftUp).isTrue();
+
+        // Financial sanity checks
+        assertThat(response.getMaterialTotal()).isGreaterThan(new BigDecimal("10000.00"));
+        assertThat(response.getGrandTotal()).isGreaterThan(response.getMaterialTotal());
+    }
+
+    @Test
+    @DisplayName("Should handle boundary conditions: 50% discount and 0% tax with exact half-up arithmetic")
+    void shouldCalculateBoundaryDiscountAndZeroTax() {
+        DesignCabinet baseCab = DesignCabinet.builder()
+                .id(1L).design(testDesign).cabinetType(CabinetType.BASE)
+                .widthMm(600).depthMm(600).heightMm(870).build();
+        testDesign.getCabinets().add(baseCab);
+
+        when(userRepository.findByEmail(testUser.getEmail())).thenReturn(Optional.of(testUser));
+        when(designRepository.findById(100L)).thenReturn(Optional.of(testDesign));
+        setupDefaultMaterials();
+
+        EstimateRequest request = EstimateRequest.builder()
+                .wastagePercentage(BigDecimal.ZERO)
+                .laborPercentage(BigDecimal.ZERO)
+                .installationPercentage(BigDecimal.ZERO)
+                .discountPercentage(new BigDecimal("50.00")) // 50% discount
+                .taxPercentage(BigDecimal.ZERO)              // 0% tax
+                .build();
+
+        CostEstimateResponse response = costEstimationService.calculateEstimate(100L, request, testUser.getEmail());
+
+        assertThat(response).isNotNull();
+        assertThat(response.getTaxAmount()).isEqualByComparingTo(BigDecimal.ZERO);
+        // At 50% discount with zero wastage/labor/tax, grand total should be exactly half of materialTotal
+        BigDecimal halfMaterial = response.getMaterialTotal().divide(new BigDecimal("2.00"), 2, java.math.RoundingMode.HALF_UP);
+        assertThat(response.getGrandTotal()).isEqualByComparingTo(halfMaterial);
+    }
 }

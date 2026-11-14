@@ -63,6 +63,9 @@ class QuotationIntegrationTest {
     private QuotationRepository quotationRepository;
 
     @Autowired
+    private com.kitchencraft.repository.MaterialRepository materialRepository;
+
+    @Autowired
     private PasswordEncoder passwordEncoder;
 
     @Autowired
@@ -256,5 +259,66 @@ class QuotationIntegrationTest {
         mockMvc.perform(get("/api/v1/projects/" + projectId + "/quotations")
                         .header("Authorization", intruderToken))
                 .andExpect(status().isForbidden());
+    }
+
+    @Test
+    @DisplayName("Historical Price Preservation: Modifying database material catalogue prices must NOT change historical quotation values")
+    void testQuotationHistoricalSnapshotPreservedAfterDatabaseMaterialPriceChange() throws Exception {
+        // Ensure baseline materials exist in database
+        com.kitchencraft.entity.Material carcassMat = materialRepository.findByNameIgnoreCase("BWR Plywood (IS 303)")
+                .orElseGet(() -> materialRepository.save(com.kitchencraft.entity.Material.builder()
+                        .name("BWR Plywood (IS 303)")
+                        .category(com.kitchencraft.entity.MaterialCategory.CARCASS)
+                        .unit(com.kitchencraft.entity.MaterialUnit.SQFT)
+                        .unitPrice(new java.math.BigDecimal("140.00"))
+                        .active(true)
+                        .build()));
+
+        // Create Quotation Snapshot at current 140.00 rate
+        CreateQuotationRequest quoteReq = CreateQuotationRequest.builder()
+                .clientEmail("siddharth.roy@example.com")
+                .validDays(30)
+                .issueImmediately(true)
+                .build();
+
+        MvcResult createResult = mockMvc.perform(post("/api/v1/designs/" + designId + "/quotations")
+                        .header("Authorization", ownerToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(quoteReq)))
+                .andExpect(status().isCreated())
+                .andReturn();
+
+        com.fasterxml.jackson.databind.JsonNode quoteNode = objectMapper.readTree(createResult.getResponse().getContentAsString());
+        Long quoteId = quoteNode.get("id").asLong();
+        double originalFinalTotal = quoteNode.get("finalTotal").asDouble();
+        double originalMaterialSubtotal = quoteNode.get("materialSubtotal").asDouble();
+
+        // SIMULATE CATALOGUE PRICE INCREASE IN DATABASE:
+        // Supplier increases BWR Plywood rate from 140.00 to 999.00
+        carcassMat.setUnitPrice(new java.math.BigDecimal("999.00"));
+        materialRepository.save(carcassMat);
+
+        // Fetch the historical quotation again
+        MvcResult readResult = mockMvc.perform(get("/api/v1/quotations/" + quoteId)
+                        .header("Authorization", ownerToken))
+                .andExpect(status().isOk())
+                .andReturn();
+
+        com.fasterxml.jackson.databind.JsonNode readNode = objectMapper.readTree(readResult.getResponse().getContentAsString());
+        double fetchedFinalTotal = readNode.get("finalTotal").asDouble();
+        double fetchedMaterialSubtotal = readNode.get("materialSubtotal").asDouble();
+
+        // CRITICAL ASSERTION: The fetched quotation values MUST BE 100% IDENTICAL to the snapshot at issue time
+        assertThat(fetchedFinalTotal).isEqualTo(originalFinalTotal);
+        assertThat(fetchedMaterialSubtotal).isEqualTo(originalMaterialSubtotal);
+
+        // Download PDF after catalogue change
+        MvcResult pdfResult = mockMvc.perform(get("/api/v1/quotations/" + quoteId + "/pdf")
+                        .header("Authorization", ownerToken))
+                .andExpect(status().isOk())
+                .andExpect(content().contentType(MediaType.APPLICATION_PDF))
+                .andReturn();
+
+        assertThat(pdfResult.getResponse().getContentAsByteArray()).isNotEmpty();
     }
 }
