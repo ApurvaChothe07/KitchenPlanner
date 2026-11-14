@@ -5,7 +5,7 @@
 [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16-blue.svg)](https://www.postgresql.org/)
 [![React](https://img.shields.io/badge/React-18.3-cyan.svg)](https://react.dev/)
 [![OpenAPI](https://img.shields.io/badge/OpenAPI-3.0-green.svg)](http://localhost:8080/swagger-ui.html)
-[![Tests](https://img.shields.io/badge/Tests-54%20Passed-success.svg)]()
+[![Tests](https://img.shields.io/badge/Tests-55%20Passed-success.svg)]()
 
 **KitchenCraft** is an enterprise-grade full-stack Kitchen Interior Planner and Cost Estimation Platform engineered for interior design contractors, modular kitchen manufacturers, and homeowners.
 
@@ -48,6 +48,137 @@ com.kitchencraft
 ├── repository/    # Spring Data JPA repositories with query-optimized fetch joins
 ├── security/      # JwtService, JwtAuthenticationFilter, JwtAuthenticationEntryPoint
 └── service/       # Layered business logic interfaces and transactional implementations
+```
+
+---
+
+## System Architecture Diagram
+
+```mermaid
+flowchart TD
+    subgraph Client["Client Tier (React 18 & Three.js)"]
+        UI["React SPA & Tailwind CSS"]
+        Konva2D["2D Floor Planner (React Konva)"]
+        Scene3D["3D Visualizer (Three.js / R3F)"]
+        Axios["Axios Client (Bearer JWT Interceptor)"]
+        UI --> Konva2D
+        UI --> Scene3D
+        Konva2D --> Axios
+        Scene3D --> Axios
+    end
+
+    subgraph Security["Spring Security 6 Gateway"]
+        AuthFilter["JwtAuthenticationFilter"]
+        EntryPoint["JwtAuthenticationEntryPoint"]
+        SecurityConfig["SecurityFilterChain (Stateless Session)"]
+        Axios --> AuthFilter
+        AuthFilter --> SecurityConfig
+    end
+
+    subgraph Backend["Application Tier (Spring Boot 3.3.5)"]
+        Controllers["Controllers (REST Endpoints)"]
+        Services["Business Services (@Transactional)"]
+        CostEngine["Zero-Trust Cost Engine (BigDecimal)"]
+        PdfEngine["Corporate PDF Generator (OpenPDF)"]
+        SecurityConfig --> Controllers
+        Controllers --> Services
+        Services --> CostEngine
+        Services --> PdfEngine
+    end
+
+    subgraph Persistence["Data Tier (Spring Data JPA / PostgreSQL 16)"]
+        Repos["JPA Repositories (Fetch Joins)"]
+        Postgres[("PostgreSQL 16 DB (Flyway V1-V4)")]
+        Services --> Repos
+        Repos --> Postgres
+    end
+```
+
+---
+
+## Entity-Relationship (ER) Diagram
+
+```mermaid
+erDiagram
+    USERS ||--o{ PROJECTS : "owns"
+    PROJECTS ||--o{ DESIGNS : "contains"
+    DESIGNS ||--o{ DESIGN_CABINETS : "places"
+    PROJECTS ||--o{ QUOTATIONS : "issues"
+    QUOTATIONS ||--o{ QUOTATION_ITEMS : "details"
+
+    USERS {
+        bigint id PK
+        string email UK
+        string password_hash
+        string full_name
+        string role
+        boolean active
+        timestamp created_at
+    }
+
+    PROJECTS {
+        bigint id PK
+        bigint owner_id FK
+        string name
+        string client_name
+        string client_email
+        string status
+        timestamp created_at
+    }
+
+    DESIGNS {
+        bigint id PK
+        bigint project_id FK
+        integer version
+        string name
+        integer room_width_mm
+        integer room_length_mm
+        integer room_height_mm
+        timestamp created_at
+    }
+
+    DESIGN_CABINETS {
+        bigint id PK
+        bigint design_id FK
+        string cabinet_type
+        integer width_mm
+        integer depth_mm
+        integer height_mm
+        double pos_x
+        double pos_y
+        double pos_z
+        double rotation_deg
+    }
+
+    MATERIALS {
+        bigint id PK
+        string name UK
+        string category
+        string unit
+        numeric unit_price
+        boolean active
+    }
+
+    QUOTATIONS {
+        bigint id PK
+        bigint project_id FK
+        bigint design_id FK
+        string quotation_number UK
+        string status
+        numeric final_total
+        timestamp valid_until
+        timestamp created_at
+    }
+
+    QUOTATION_ITEMS {
+        bigint id PK
+        bigint quotation_id FK
+        string item_description
+        string category
+        numeric quantity
+        numeric unit_price
+        numeric total_price
+    }
 ```
 
 ---
@@ -295,6 +426,7 @@ npm test
 ### Coverage by Component
 | Test Class | Scope / Tested Workflows | Tests | Status |
 | :--- | :--- | :---: | :---: |
+| `FullPlatformEndToEndIntegrationTest` | Complete unified lifecycle: Register $\to$ Design $\to$ 2D Cabinets $\to$ Reload $\to$ Estimate $\to$ Compare $\to$ Quotation $\to$ PDF $\to$ Cross-Tenant Access Checks | 1 | PASSED |
 | `AuthControllerTest` | Registration, login, duplicate email handling, validation, 401 unauthorized | 8 | PASSED |
 | `ProjectAndDesignIntegrationTest` | Project CRUD, design versioning, boundary clamping, ownership isolation | 12 | PASSED |
 | `MaterialAndEstimateIntegrationTest` | Material catalogue CRUD, category filters, estimate calculations, comparison engine | 8 | PASSED |
@@ -304,7 +436,7 @@ npm test
 | `QuotationServiceTest` | Price snapshotting, status state machine (`DRAFT` $\to$ `ISSUED` $\to$ `CANCELLED`), binary PDF header (`%PDF-`) | 6 | PASSED |
 | `JwtServiceTest` | Token generation, validation, expiration, and malformed header rejection | 4 | PASSED |
 | `KitchenCraftApplicationTests` | Spring Boot context load sanity check | 1 | PASSED |
-| **Total** | **All Layers & Integration Boundaries** | **54** | **100% PASS** |
+| **Total** | **All Layers & Integration Boundaries** | **55** | **100% PASS** |
 
 ---
 
@@ -376,10 +508,81 @@ KitchenCraft includes a continuous integration pipeline (`.github/workflows/ci.y
 
 ---
 
-## Security & Quality Safeguards
+---
 
-- **No Plaintext Passwords**: Passwords hashed using Spring Security `BCryptPasswordEncoder` (strength 10).
-- **Zero Exposed Secrets**: Secret keys and DB credentials loaded through environment variables; dev defaults provided only for local standalone testing.
-- **Cross-Tenant Ownership Enforcement**: Every project, design, cabinet, estimate, and quotation endpoint explicitly checks `project.getOwner().getId().equals(user.getId())`. Rejects unauthorized cross-tenant requests with `403 Forbidden`.
-- **Strict CORS**: Production CORS rejects arbitrary wildcard origins, requiring explicit origins via `CORS_ALLOWED_ORIGINS`.
-- **Sanitized Logging**: Slf4j logging outputs entity IDs and business operations without logging plaintext passwords or JWT tokens.
+## Production Hosting & Cloud Deployment Architecture
+
+KitchenCraft is designed to run in containerized or PaaS cloud environments. Below is an architectural recommendation and cost breakdown for production deployment:
+
+### 1. Cloud Provider Comparison & Sizing
+
+| Component | Recommended Cloud Provider | Tier & Resource Limits | Pricing Notes |
+| :--- | :--- | :--- | :--- |
+| **Backend API** | **Render** or **Railway** | 512 MB – 1 GB RAM, 0.5 – 1 vCPU | Render Free Tier spins down after 15m of inactivity; \$7/mo Starter Tier provides 24/7 uptime. Railway provides \$5/mo usage credit. |
+| **PostgreSQL Database** | **Neon** or **Supabase** | PostgreSQL 16, 0.5 GB – 1 GB Storage | Neon Free Tier provides 0.5 GB storage, instant branching, and connection pooling (PgBouncer). Supabase provides 500 MB DB storage on Free Tier. |
+| **React Frontend SPA** | **Vercel** or **Netlify** | Global Edge CDN, SSL auto-renew | Free Tier includes 100 GB/month bandwidth and automatic GitHub PR preview deployments. |
+
+### 2. Step-by-Step Cloud Deployment
+
+```mermaid
+flowchart LR
+    A["GitHub Repository<br/>(main branch)"] --> B["Vercel / Netlify<br/>(Frontend SPA CDN)"]
+    A --> C["Render / Railway<br/>(Dockerized Backend)"]
+    C --> D["Neon / Supabase<br/>(Managed PostgreSQL 16)"]
+    B -- "HTTPS API Calls<br/>(JWT Bearer)" --> C
+```
+
+1. **Database Setup (Neon or Supabase)**:
+   - Provision a PostgreSQL 16 project on [Neon.tech](https://neon.tech) or [Supabase.com](https://supabase.com).
+   - Copy the connection URI: `jdbc:postgresql://<neon-host>:5432/<db_name>?sslmode=require`.
+2. **Backend Deployment (Render or Railway)**:
+   - Connect the GitHub repository and select Docker build (`backend/Dockerfile`).
+   - Configure required environment variables:
+     - `SPRING_PROFILES_ACTIVE`: `prod`
+     - `SPRING_DATASOURCE_URL`: `jdbc:postgresql://<db_host>:5432/<db_name>?sslmode=require`
+     - `SPRING_DATASOURCE_USERNAME`: `<db_user>`
+     - `SPRING_DATASOURCE_PASSWORD`: `<db_password>`
+     - `JWT_SECRET`: `<64_char_cryptographically_secure_random_key>`
+     - `CORS_ALLOWED_ORIGINS`: `https://your-kitchencraft-frontend.vercel.app`
+   - Health Check Path: `/actuator/health`
+   - Flyway applies migrations `V1` through `V4` automatically on first boot.
+3. **Frontend Deployment (Vercel or Netlify)**:
+   - Import `frontend/` directory in Vercel or Netlify.
+   - Set Build Command: `npm run build`, Output Directory: `dist`.
+   - Add environment variable:
+     - `VITE_API_BASE_URL`: `https://your-kitchencraft-backend.onrender.com/api/v1`
+   - Configure SPA rewrite rule in `vercel.json`:
+     ```json
+     {
+       "rewrites": [{ "source": "/(.*)", "destination": "/index.html" }]
+     }
+     ```
+
+---
+
+## Technical Interview Preparation
+
+A comprehensive, code-backed interview preparation guide has been created in:  
+👉 **[`docs/INTERVIEW_PREPARATION_GUIDE.md`](docs/INTERVIEW_PREPARATION_GUIDE.md)**
+
+It provides structured answers explaining:
+1. Architectural decisions (Spring Boot 3, PostgreSQL 16, Java 21)
+2. Controller-Service-Repository patterns
+3. JPA entity relationships, cascading, and N+1 prevention
+4. Stateless JWT and multi-tenant project ownership enforcement
+5. Millimeter-to-meter 2D Konva to Three.js 3D coordinate transformations
+6. Zero-trust cost estimation engine panel mathematical derivations
+7. Exact monetary arithmetic via `BigDecimal` and `RoundingMode.HALF_UP`
+8. Historical quotation snapshot freezing and immutability guarantees
+9. Unit vs. integration testing methodologies (55 automated tests)
+10. Multi-stage Docker optimization and GitHub Actions CI pipelines
+11. Configuration externalization and secrets management
+12. Architectural trade-offs and future scaling considerations
+
+---
+
+## Known Limitations & Future Roadmap
+
+- **Synchronous PDF Rendering**: Currently rendered in-memory using OpenPDF in under 100ms. At massive concurrent scale, PDF rendering should be offloaded to an asynchronous message broker (RabbitMQ/Kafka) with cloud storage (AWS S3) and WebSocket client notification.
+- **Complex 3D Meshes**: The 3D scene renders parameterized boxes for fast client loading and 60 FPS performance. A future release can add GLTF/GLB models for textured finishes, physical handles, and appliance fixtures.
+- **Refresh Token Rotation**: Current JWTs are valid for 24 hours. A future release can introduce short-lived access tokens (15 minutes) with persistent, rotating refresh tokens stored in HTTP-only secure cookies.
