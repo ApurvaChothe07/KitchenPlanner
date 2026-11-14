@@ -1,5 +1,5 @@
 import React from 'react';
-import { Save, RefreshCw, ArrowLeft, CheckCircle2, AlertCircle, Clock, Layers, Box, Calculator, GitCompare } from 'lucide-react';
+import { Save, RefreshCw, ArrowLeft, CheckCircle2, AlertCircle, Clock, Layers, Box, Calculator, GitCompare, FileText } from 'lucide-react';
 
 export const EditorToolbar = ({
   projectName,
@@ -13,7 +13,8 @@ export const EditorToolbar = ({
   onReload,
   onBackToProjects,
   onOpenEstimate,
-  onOpenComparison
+  onOpenComparison,
+  onOpenQuotations
 }) => {
   return (
     <header className="h-14 bg-slate-900 border-b border-slate-800 px-4 flex items-center justify-between z-10">
@@ -117,6 +118,15 @@ export const EditorToolbar = ({
         >
           <GitCompare className="w-3.5 h-3.5 text-indigo-400" />
           <span className="hidden md:inline">Compare Finishes</span>
+        </button>
+
+        <button
+          onClick={onOpenQuotations}
+          className="flex items-center space-x-1.5 bg-sky-600/20 hover:bg-sky-600/30 text-sky-300 border border-sky-500/30 px-3 py-1.5 rounded-lg text-xs font-medium transition"
+          title="View and Download Official Project Quotations & PDFs"
+        >
+          <FileText className="w-3.5 h-3.5 text-sky-400" />
+          <span className="hidden md:inline">Quotations</span>
         </button>
 
         <div className="h-5 w-px bg-slate-800 hidden md:block" />

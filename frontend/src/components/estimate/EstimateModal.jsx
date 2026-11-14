@@ -1,12 +1,15 @@
 import React, { useState, useEffect } from 'react';
-import { X, Calculator, RefreshCw, FileText, CheckCircle, AlertCircle, Info, ChevronDown } from 'lucide-react';
+import { X, Calculator, RefreshCw, FileText, CheckCircle, AlertCircle, Info, ChevronDown, Download, Send } from 'lucide-react';
 import { materialService } from '../../services/materialService';
 import { estimateService } from '../../services/estimateService';
+import { quotationService } from '../../services/quotationService';
 
-export const EstimateModal = ({ designId, isOpen, onClose }) => {
+export const EstimateModal = ({ designId, isOpen, onClose, onOpenQuotations }) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [estimate, setEstimate] = useState(null);
+  const [creatingQuote, setCreatingQuote] = useState(false);
+  const [createdQuote, setCreatedQuote] = useState(null);
 
   // Available Materials from Catalogue
   const [carcassMaterials, setCarcassMaterials] = useState([]);
@@ -85,9 +88,39 @@ export const EstimateModal = ({ designId, isOpen, onClose }) => {
     }
   };
 
-  const handleRecalculate = (e) => {
-    e.preventDefault();
-    fetchEstimate();
+  const handleCreateQuotation = async (issueNow = false) => {
+    if (!designId) return;
+    try {
+      setCreatingQuote(true);
+      setError('');
+
+      const payload = {
+        estimateRequest: {
+          carcassMaterialId: selectedCarcassId ? Number(selectedCarcassId) : null,
+          shutterMaterialId: selectedShutterId ? Number(selectedShutterId) : null,
+          countertopMaterialId: selectedCountertopId ? Number(selectedCountertopId) : null,
+          wastagePercentage: parseFloat(wastagePct) || 10.0,
+          laborPercentage: parseFloat(laborPct) || 15.0,
+          installationPercentage: parseFloat(installPct) || 5.0,
+          discountPercentage: parseFloat(discountPct) || 0.0,
+          taxPercentage: parseFloat(taxPct) || 18.0,
+        },
+        issueImmediately: issueNow,
+      };
+
+      const quote = await quotationService.createQuotation(designId, payload);
+      setCreatedQuote(quote);
+    } catch (err) {
+      console.error('Failed to create quotation:', err);
+      setError(err.response?.data?.message || 'Could not generate quotation snapshot.');
+    } finally {
+      setCreatingQuote(false);
+    }
+  };
+
+  const handleDownloadCreatedPdf = async () => {
+    if (!createdQuote) return;
+    await quotationService.downloadPdf(createdQuote.id, createdQuote.quotationNumber);
   };
 
   if (!isOpen) return null;
@@ -383,6 +416,48 @@ export const EstimateModal = ({ designId, isOpen, onClose }) => {
             </div>
           </div>
 
+          {/* Created Quotation Alert Banner */}
+          {createdQuote && (
+            <div className="p-4 bg-emerald-950/40 border border-emerald-800 rounded-xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 animate-fade-in">
+              <div className="flex items-center space-x-3">
+                <div className="p-2 bg-emerald-500/20 text-emerald-400 rounded-lg">
+                  <CheckCircle className="w-5 h-5" />
+                </div>
+                <div>
+                  <h4 className="text-xs font-semibold text-emerald-200">
+                    Official Quotation Generated: {createdQuote.quotationNumber}
+                  </h4>
+                  <p className="text-[11px] text-emerald-400/80">
+                    Prices and line items are frozen. You can now download the official PDF.
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-center space-x-2">
+                <button
+                  type="button"
+                  onClick={handleDownloadCreatedPdf}
+                  className="flex items-center space-x-1.5 bg-emerald-600 hover:bg-emerald-500 text-white px-3 py-1.5 rounded-lg text-xs font-semibold shadow-sm transition"
+                >
+                  <Download className="w-3.5 h-3.5" />
+                  <span>Download PDF</span>
+                </button>
+                {onOpenQuotations && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      onClose();
+                      onOpenQuotations();
+                    }}
+                    className="flex items-center space-x-1 bg-slate-800 hover:bg-slate-700 text-slate-200 px-3 py-1.5 rounded-lg text-xs font-medium border border-slate-700 transition"
+                  >
+                    <span>View All Quotes</span>
+                  </button>
+                )}
+              </div>
+            </div>
+          )}
+
           {/* Assumptions Notice */}
           <div className="p-3.5 bg-slate-950/50 border border-slate-800/70 rounded-xl text-slate-400 text-[11px] space-y-1.5">
             <div className="flex items-center space-x-1.5 text-slate-300 font-semibold">
@@ -398,13 +473,29 @@ export const EstimateModal = ({ designId, isOpen, onClose }) => {
         </div>
 
         {/* Modal Footer */}
-        <div className="px-6 py-3 bg-slate-850 border-t border-slate-800 flex items-center justify-end space-x-3">
-          <button
-            onClick={onClose}
-            className="px-4 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-medium rounded-lg transition"
-          >
-            Close
-          </button>
+        <div className="px-6 py-3 bg-slate-850 border-t border-slate-800 flex items-center justify-between">
+          <div className="text-[11px] text-slate-400">
+            Generate an official client quotation to lock historical rates.
+          </div>
+
+          <div className="flex items-center space-x-2">
+            <button
+              type="button"
+              onClick={() => handleCreateQuotation(false)}
+              disabled={creatingQuote || !estimate}
+              className="flex items-center space-x-1.5 bg-brand-600 hover:bg-brand-500 disabled:opacity-50 text-white px-3.5 py-1.5 rounded-lg text-xs font-semibold shadow-sm transition"
+            >
+              <FileText className="w-3.5 h-3.5" />
+              <span>{creatingQuote ? 'Generating...' : 'Create Formal Quotation'}</span>
+            </button>
+
+            <button
+              onClick={onClose}
+              className="px-4 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-medium rounded-lg transition"
+            >
+              Close
+            </button>
+          </div>
         </div>
       </div>
     </div>
