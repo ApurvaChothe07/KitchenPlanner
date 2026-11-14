@@ -7,6 +7,7 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
+    "test": "node src/utils/coordinates.test.js",
     "postinstall": "node -e \"const fs=require('fs');const p1='node_modules/@rollup/wasm-node/dist',p2='node_modules/rollup/dist';if(fs.existsSync(p1)&&fs.existsSync(p2)){fs.cpSync(p1,p2,{recursive:true});}\""
   },
   "dependencies": {

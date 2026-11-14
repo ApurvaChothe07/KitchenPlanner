@@ -98,26 +98,38 @@ The backend is configured via standard environment variables:
 
 | Variable | Description | Default (Local / Dev) | Production Guideline |
 | :--- | :--- | :--- | :--- |
-| `PORT` | HTTP port for backend server | `8080` | Assigned by container platform / PaaS |
-| `SPRING_PROFILES_ACTIVE` | Active Spring profile | `dev` | Set to `prod` in deployment |
-| `DB_HOST` | PostgreSQL hostname | `localhost` | Managed DB host (e.g. AWS RDS) |
+| `PORT` / `BACKEND_PORT` | HTTP port for backend server | `8080` | Assigned by container platform / PaaS |
+| `FRONTEND_PORT` | HTTP port for frontend Nginx server | `80` | `80` or `443` behind reverse proxy |
+| `SPRING_PROFILES_ACTIVE` | Active Spring profile | `dev` | Set to `prod` in deployment, `test` for CI/unit tests |
+| `DB_HOST` | PostgreSQL hostname | `localhost` (or `postgres` in Docker) | Managed DB host (e.g. AWS RDS) |
 | `DB_PORT` | PostgreSQL port | `5432` | `5432` |
 | `DB_NAME` | PostgreSQL database name | `kitchencraft_db` | Production DB name |
 | `DB_USERNAME` | PostgreSQL database user | `postgres` | Least-privilege application user |
 | `DB_PASSWORD` | PostgreSQL user password | `postgres` | Strong secret from secrets vault |
 | `JWT_SECRET` | 256-bit secret key for HMAC-SHA256 | `404E635266556...` (dev key) | **Must** be a 64+ char cryptographically secure random string |
 | `JWT_EXPIRATION_MS` | Token lifespan in milliseconds | `86400000` (24 hours) | `86400000` (or shorter with refresh token) |
-| `CORS_ALLOWED_ORIGINS` | Comma-separated allowed frontend origins | `http://localhost:5173,http://localhost:3000` | Specific frontend domain (e.g. `https://kitchencraft.com`) |
+| `CORS_ALLOWED_ORIGINS` | Comma-separated allowed frontend origins | `http://localhost,http://localhost:80,http://localhost:5173,http://localhost:3000` | Specific frontend domain (e.g. `https://kitchencraft.com`) |
+| `LOG_LEVEL` | Application logging granularity | `INFO` | `INFO` or `WARN` in production |
+| `VITE_API_BASE_URL` | Frontend API base URL | `/api/v1` (proxied) | Absolute or relative API URL |
 
 ---
 
 ## Database Migrations (Flyway)
 
-Migrations reside in `backend/src/main/resources/db/migration/`:
-- **`V1__create_users_table.sql`**: Users table with unique email index, hashed passwords, and roles (`ROLE_USER`, `ROLE_ADMIN`).
+Flyway manages database evolution automatically on application startup. Migrations reside in `backend/src/main/resources/db/migration/`:
+- **`V1__create_users_table.sql`**: Users table with unique email index, BCrypt hashed passwords, and roles (`ROLE_USER`, `ROLE_ADMIN`).
 - **`V2__create_projects_and_designs_schema.sql`**: `projects`, `designs`, and `design_cabinets` tables with unique version constraints and millimeter dimension columns.
 - **`V3__create_materials_schema_and_seed.sql`**: `materials` catalogue with sample benchmark pricing for BWR Plywood, HDHMR, Acrylic, Granite, Quartz, and Blum-type hardware fittings.
 - **`V4__create_quotations_schema.sql`**: `quotations` and `quotation_items` snapshot tables with status tracking and foreign key cascading.
+
+### How Migrations Work
+1. When the Spring Boot application boots with PostgreSQL, Flyway connects first, creates the `flyway_schema_history` metadata table if absent, scans `classpath:db/migration`, and applies any unapplied SQL scripts in alphabetical version order within transactions.
+2. In the automated test profile (`application-test.yml`), Hibernate creates schema entities in memory on H2 in PostgreSQL compatibility mode, ensuring instant, isolated test runs without requiring pre-existing database state.
+3. To inspect migration status manually:
+   ```bash
+   # Using Maven Flyway plugin
+   mvn -f backend/pom.xml flyway:info
+   ```
 
 ---
 
@@ -250,9 +262,22 @@ When input validation fails or access is unauthorized:
 The backend features a comprehensive automated test suite with **54 tests** across unit, service, security, and MockMvc integration layers.
 
 ### Running Automated Tests
+
+#### 1. Backend Automated Tests (JUnit 5, Mockito & Spring Boot Test)
 ```bash
-# Execute complete backend automated test suite
-mvn -f backend/pom.xml test
+# Execute complete backend automated test suite using Maven Wrapper
+cd backend
+./mvnw clean test
+
+# Or run full verification with code packaging
+./mvnw clean verify
+```
+
+#### 2. Frontend Automated Tests (Node Test Runner & Mathematics Verification)
+```bash
+# Execute 2D coordinate mathematics, grid snapping, and collision detection tests
+cd frontend
+npm test
 ```
 
 ### Test Suite Execution Output

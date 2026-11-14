@@ -7,6 +7,9 @@ on:
     branches: [ main, develop ]
 
 jobs:
+  # =========================================================
+  # Job 1: Backend Compilation, Verification & Automated Tests
+  # =========================================================
   backend-test-and-build:
     name: Backend CI (Java 21 & Maven)
     runs-on: ubuntu-latest
@@ -40,7 +43,7 @@ jobs:
       - name: Grant Execute Permission to Maven Wrapper
         run: chmod +x backend/mvnw
 
-      - name: Run Backend Tests & Verification
+      - name: Run Maven Compilation & Verification (54 Tests)
         run: ./mvnw -B verify
         working-directory: backend
         env:
@@ -61,6 +64,9 @@ jobs:
           path: backend/target/surefire-reports/
           retention-days: 7
 
+  # =========================================================
+  # Job 2: Frontend Installation, Testing & Production Build
+  # =========================================================
   frontend-build:
     name: Frontend CI (Node 20 & Vite)
     runs-on: ubuntu-latest
@@ -80,9 +86,15 @@ jobs:
         working-directory: frontend
         run: npm ci
 
+      - name: Run Frontend Coordinate & Physics Tests
+        working-directory: frontend
+        run: npm test
+
       - name: Build Frontend Production Bundle
         working-directory: frontend
         run: npm run build
+        env:
+          VITE_API_BASE_URL: /api/v1
 
       - name: Upload Frontend Build Artifacts
         uses: actions/upload-artifact@v4
@@ -91,6 +103,9 @@ jobs:
           path: frontend/dist/
           retention-days: 7
 
+  # =========================================================
+  # Job 3: Docker Container Build Verification
+  # =========================================================
   docker-build-verification:
     name: Container Build Verification
     runs-on: ubuntu-latest
@@ -109,7 +124,7 @@ jobs:
           context: ./backend
           file: ./backend/Dockerfile
           push: false
-          tags: kitchencraft-backend:test
+          tags: kitchencraft-backend:ci-test
 
       - name: Build Frontend Docker Image
         uses: docker/build-push-action@v5
@@ -117,4 +132,4 @@ jobs:
           context: ./frontend
           file: ./frontend/Dockerfile
           push: false
-          tags: kitchencraft-frontend:test
+          tags: kitchencraft-frontend:ci-test
