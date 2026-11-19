@@ -26,6 +26,9 @@ Desktop.ini
 # =========================
 backend/target/
 target/
+backend/data/
+*.mv.db
+*.trace.db
 *.class
 *.jar
 !backend/.mvn/wrapper/maven-wrapper.jar

@@ -7,9 +7,12 @@ import { Plus, FolderPlus, Trash2, Layout, Calendar, User, LogOut, ArrowUpRight,
 export const ProjectDashboard = ({ onOpenEditor }) => {
   const [projects, setProjects] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState('');
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [newProjectName, setNewProjectName] = useState('');
   const [newClientName, setNewClientName] = useState('');
+  const [isCreating, setIsCreating] = useState(false);
+  const [createError, setCreateError] = useState('');
   const [currentUser, setCurrentUser] = useState(null);
 
   useEffect(() => {
@@ -21,10 +24,14 @@ export const ProjectDashboard = ({ onOpenEditor }) => {
   const loadProjects = async () => {
     try {
       setLoading(true);
+      setLoadError('');
       const data = await projectService.getProjects();
-      setProjects(data);
+      setProjects(data || []);
     } catch (err) {
       console.error('Failed to load projects:', err);
+      if (err.response?.status !== 401) {
+        setLoadError(err.response?.data?.message || err.message || 'Unable to connect to backend server (http://localhost:8080).');
+      }
     } finally {
       setLoading(false);
     }
@@ -33,6 +40,9 @@ export const ProjectDashboard = ({ onOpenEditor }) => {
   const handleCreateProject = async (e) => {
     e.preventDefault();
     if (!newProjectName.trim()) return;
+
+    setIsCreating(true);
+    setCreateError('');
 
     try {
       const created = await projectService.createProject({
@@ -59,6 +69,10 @@ export const ProjectDashboard = ({ onOpenEditor }) => {
       onOpenEditor(created, initialDesign);
     } catch (err) {
       console.error('Failed to create project:', err);
+      const msg = err.response?.data?.message || err.response?.data?.error || err.message || 'Failed to create project. Please verify backend connection.';
+      setCreateError(msg);
+    } finally {
+      setIsCreating(false);
     }
   };
 
@@ -153,9 +167,21 @@ export const ProjectDashboard = ({ onOpenEditor }) => {
         </div>
 
         {/* Project Cards Grid */}
+        {loadError && (
+          <div className="mb-6 p-4 rounded-xl bg-red-950/50 border border-red-500/40 text-red-300 text-xs flex items-center justify-between shadow-lg">
+            <span>{loadError}</span>
+            <button
+              onClick={loadProjects}
+              className="px-3 py-1 bg-red-900/60 hover:bg-red-800 rounded-lg text-white font-medium transition"
+            >
+              Retry
+            </button>
+          </div>
+        )}
+
         {loading ? (
           <div className="text-center py-20 text-slate-500">
-            <p className="text-sm animate-pulse">Loading projects from PostgreSQL...</p>
+            <p className="text-sm animate-pulse">Loading projects from database...</p>
           </div>
         ) : projects.length === 0 ? (
           <div className="text-center py-20 border-2 border-dashed border-slate-800 rounded-3xl bg-slate-900/30 p-8">
@@ -232,6 +258,12 @@ export const ProjectDashboard = ({ onOpenEditor }) => {
               Enter basic project details to initialize the room workspace.
             </p>
 
+            {createError && (
+              <div className="p-3 mb-3 rounded-lg bg-red-950/60 border border-red-500/40 text-red-300 text-xs">
+                {createError}
+              </div>
+            )}
+
             <form onSubmit={handleCreateProject} className="space-y-3 text-xs">
               <div>
                 <label className="block text-slate-300 font-medium mb-1">Project Name *</label>
@@ -259,16 +291,27 @@ export const ProjectDashboard = ({ onOpenEditor }) => {
               <div className="flex items-center justify-end space-x-2 pt-4">
                 <button
                   type="button"
-                  onClick={() => setShowCreateModal(false)}
+                  onClick={() => {
+                    setShowCreateModal(false);
+                    setCreateError('');
+                  }}
                   className="px-4 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 transition"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 rounded-lg bg-brand-600 hover:bg-brand-500 text-white font-medium transition shadow-sm"
+                  disabled={isCreating}
+                  className="px-4 py-2 rounded-lg bg-brand-600 hover:bg-brand-500 disabled:opacity-50 text-white font-medium transition shadow-sm flex items-center space-x-2"
                 >
-                  Create & Open 2D Canvas
+                  {isCreating ? (
+                    <>
+                      <span className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                      <span>Creating...</span>
+                    </>
+                  ) : (
+                    <span>Create & Open 2D Canvas</span>
+                  )}
                 </button>
               </div>
             </form>

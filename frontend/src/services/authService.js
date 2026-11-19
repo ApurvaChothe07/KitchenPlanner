@@ -27,6 +27,7 @@ export const authService = {
   logout() {
     localStorage.removeItem('kc_auth_token');
     localStorage.removeItem('kc_auth_user');
+    window.dispatchEvent(new Event('kc_auth_change'));
   },
 
   getToken() {

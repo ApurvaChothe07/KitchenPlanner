@@ -10,7 +10,18 @@ export function App() {
   const [activeDesign, setActiveDesign] = useState(null);
 
   useEffect(() => {
+    const handleAuthChange = () => {
+      const auth = authService.isAuthenticated();
+      setIsAuthenticated(auth);
+      if (!auth) {
+        setActiveProject(null);
+        setActiveDesign(null);
+      }
+    };
+
     setIsAuthenticated(authService.isAuthenticated());
+    window.addEventListener('kc_auth_change', handleAuthChange);
+    return () => window.removeEventListener('kc_auth_change', handleAuthChange);
   }, []);
 
   const handleAuthSuccess = () => {

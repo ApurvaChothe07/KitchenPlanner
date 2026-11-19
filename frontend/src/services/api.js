@@ -32,6 +32,7 @@ api.interceptors.response.use(
       if (!isAuthEndpoint) {
         localStorage.removeItem('kc_auth_token');
         localStorage.removeItem('kc_auth_user');
+        window.dispatchEvent(new Event('kc_auth_change'));
       }
     }
     return Promise.reject(error);
