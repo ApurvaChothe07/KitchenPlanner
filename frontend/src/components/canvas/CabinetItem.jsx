@@ -1,6 +1,6 @@
 import React, { useRef } from 'react';
 import { Group, Rect, Text } from 'react-konva';
-import { mmToPx, pxToMm, snapToGridMm, clampWithinRoom } from '../../utils/coordinates';
+import { mmToPx, pxToMm, snapToGridMm, clampWithinRoom, isLightColor } from '../../utils/coordinates';
 
 const CABINET_COLORS = {
   BASE: { fill: '#1e293b', stroke: '#38bdf8', text: '#f8fafc' },
@@ -30,6 +30,10 @@ export const CabinetItem = ({
   const yPx = mmToPx(cabinet.posY, scale);
 
   const colorConfig = CABINET_COLORS[cabinet.cabinetType] || CABINET_COLORS.BASE;
+  const cabinetFill = cabinet.finishColor || colorConfig.fill;
+  const isLight = isLightColor(cabinetFill);
+  const textColor = isLight ? '#0f172a' : colorConfig.text;
+  const subtextColor = isLight ? '#334155' : '#94a3b8';
 
   const handleDragEnd = (e) => {
     const rawX = e.target.x();
@@ -81,12 +85,14 @@ export const CabinetItem = ({
       <Rect
         width={widthPx}
         height={depthPx}
-        fill={colorConfig.fill}
+        fill={cabinetFill}
         stroke={
           isColliding
             ? '#ef4444' // Red if overlapping
             : isSelected
             ? '#22c55e' // Bright Green if selected
+            : isLight
+            ? '#475569'
             : colorConfig.stroke
         }
         strokeWidth={isSelected ? 3 : isColliding ? 3 : 1.5}
@@ -103,7 +109,7 @@ export const CabinetItem = ({
         y={depthPx - 4}
         width={widthPx - 2}
         height={3}
-        fill={isSelected ? '#22c55e' : '#94a3b8'}
+        fill={isSelected ? '#22c55e' : isLight ? '#0f172a' : '#94a3b8'}
       />
 
       {/* Label: Type & Dimensions */}
@@ -114,7 +120,7 @@ export const CabinetItem = ({
             y={4}
             text={cabinet.cabinetType.replace('_', ' ')}
             fontSize={Math.max(9, Math.min(11, widthPx / 7))}
-            fill={colorConfig.text}
+            fill={textColor}
             fontStyle="bold"
             listening={false}
           />
@@ -123,7 +129,7 @@ export const CabinetItem = ({
             y={depthPx - 16}
             text={`${cabinet.widthMm}×${cabinet.depthMm}`}
             fontSize={Math.max(8, Math.min(10, widthPx / 8))}
-            fill="#94a3b8"
+            fill={subtextColor}
             listening={false}
           />
         </>

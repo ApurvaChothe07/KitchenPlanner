@@ -15,8 +15,11 @@ import {
   Copy,
   ArrowUp,
   ArrowDown,
-  X
+  X,
+  Palette,
+  Check
 } from 'lucide-react';
+import { CABINET_COLOR_PALETTE, isLightColor } from '../../utils/coordinates';
 
 // Error Boundary for WebGL Rendering Failures
 class WebGLErrorBoundary extends Component {
@@ -71,6 +74,11 @@ export const KitchenScene3D = ({
   const controlsRef = useRef(null);
   const [transformMode, setTransformMode] = useState('translate'); // 'translate' | 'rotate'
   const [snapEnabled, setSnapEnabled] = useState(true);
+  const [isColorPickerOpen, setIsColorPickerOpen] = useState(false);
+
+  useEffect(() => {
+    setIsColorPickerOpen(false);
+  }, [selectedCabinetId]);
 
   const roomWm = roomWidthMm / 1000;
   const roomLm = roomLengthMm / 1000;
@@ -305,6 +313,104 @@ export const KitchenScene3D = ({
             <Grid className="w-3.5 h-3.5" />
             <span>{snapEnabled ? 'Snap: 50mm' : 'Snap: Off'}</span>
           </button>
+
+          {/* Shutter Color Picker Trigger & Popover in 3D */}
+          <div className="relative">
+            <button
+              onClick={() => setIsColorPickerOpen(!isColorPickerOpen)}
+              className="px-2 py-1 text-xs text-slate-300 hover:text-white hover:bg-slate-800 rounded-lg transition font-medium flex items-center space-x-1.5 border border-slate-700 bg-slate-800/80"
+              title="Change Cabinet Shutter Color"
+            >
+              <span
+                className="w-3.5 h-3.5 rounded-full border border-slate-500 shadow-sm"
+                style={{ backgroundColor: selectedCabinet.finishColor || '#475569' }}
+              />
+              <span>Color</span>
+            </button>
+
+            {/* Floating Color Palette Popover */}
+            {isColorPickerOpen && (
+              <div className="absolute top-full left-1/2 -translate-x-1/2 mt-2 bg-slate-900/95 backdrop-blur-md border border-slate-700 p-3 rounded-xl shadow-2xl z-30 w-56">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-[11px] font-semibold text-slate-200 flex items-center space-x-1">
+                    <Palette className="w-3 h-3 text-brand-400" />
+                    <span>Shutter Color</span>
+                  </span>
+                  <button
+                    onClick={() => setIsColorPickerOpen(false)}
+                    className="text-slate-400 hover:text-slate-200 text-xs px-1"
+                  >
+                    ✕
+                  </button>
+                </div>
+
+                {/* Swatches Grid */}
+                <div className="grid grid-cols-6 gap-1.5 mb-2.5">
+                  {CABINET_COLOR_PALETTE.map((swatch) => {
+                    const isSelectedColor =
+                      (selectedCabinet.finishColor || '#475569').toLowerCase() === swatch.hex.toLowerCase();
+                    return (
+                      <button
+                        key={swatch.hex}
+                        type="button"
+                        onClick={() => {
+                          onUpdateCabinet &&
+                            onUpdateCabinet({
+                              ...selectedCabinet,
+                              finishColor: swatch.hex
+                            });
+                        }}
+                        title={`${swatch.name} (${swatch.hex})`}
+                        className={`w-6 h-6 rounded border transition flex items-center justify-center ${
+                          isSelectedColor
+                            ? 'border-brand-400 ring-2 ring-brand-500/50 scale-105 shadow'
+                            : 'border-slate-700 hover:border-slate-500 hover:scale-105'
+                        }`}
+                        style={{ backgroundColor: swatch.hex }}
+                      >
+                        {isSelectedColor && (
+                          <Check
+                            className={`w-3 h-3 ${
+                              isLightColor(swatch.hex) ? 'text-slate-900' : 'text-white'
+                            }`}
+                          />
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+
+                {/* Custom Native Color Picker Row */}
+                <div className="flex items-center space-x-2 pt-2 border-t border-slate-800">
+                  <input
+                    type="color"
+                    value={selectedCabinet.finishColor || '#475569'}
+                    onChange={(e) => {
+                      onUpdateCabinet &&
+                        onUpdateCabinet({
+                          ...selectedCabinet,
+                          finishColor: e.target.value
+                        });
+                    }}
+                    className="w-6 h-6 rounded cursor-pointer border border-slate-600 bg-transparent"
+                  />
+                  <input
+                    type="text"
+                    value={selectedCabinet.finishColor || '#475569'}
+                    onChange={(e) => {
+                      onUpdateCabinet &&
+                        onUpdateCabinet({
+                          ...selectedCabinet,
+                          finishColor: e.target.value
+                        });
+                    }}
+                    className="flex-1 bg-slate-950 border border-slate-700 rounded px-1.5 py-0.5 text-[11px] text-slate-100 font-mono"
+                    placeholder="#38bdf8"
+                  />
+                </div>
+              </div>
+            )}
+          </div>
 
           {/* Wall Cabinet Height Adjustment */}
           {isWall && (

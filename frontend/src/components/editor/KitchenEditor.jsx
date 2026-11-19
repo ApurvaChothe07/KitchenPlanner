@@ -157,6 +157,21 @@ export const KitchenEditor = ({
     setIsDirty(true);
   };
 
+  // Apply Finish Color to All Cabinets in Same Category (e.g. all Base or Wall units)
+  const handleApplyColorToType = (cabinetType, color) => {
+    const isBaseCategory = cabinetType.includes('BASE');
+    setDesign((prev) => ({
+      ...prev,
+      cabinets: prev.cabinets.map((cab) => {
+        const matches = isBaseCategory
+          ? cab.cabinetType.includes('BASE')
+          : cab.cabinetType === cabinetType;
+        return matches ? { ...cab, finishColor: color } : cab;
+      })
+    }));
+    setIsDirty(true);
+  };
+
   // Cabinet Duplicate Handler
   const handleDuplicateCabinet = (cab) => {
     const tempId = -Date.now();
@@ -338,6 +353,7 @@ export const KitchenEditor = ({
           onDeleteCabinet={handleDeleteCabinet}
           onDuplicateCabinet={handleDuplicateCabinet}
           onDeselect={() => setSelectedCabinetId(null)}
+          onApplyColorToType={handleApplyColorToType}
         />
       </div>
 

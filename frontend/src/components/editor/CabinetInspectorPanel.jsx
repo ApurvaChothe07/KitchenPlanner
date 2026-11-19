@@ -1,5 +1,6 @@
 import React from 'react';
-import { Sliders, Trash2, RotateCw, AlertTriangle, Layers, Copy } from 'lucide-react';
+import { Sliders, Trash2, RotateCw, AlertTriangle, Layers, Copy, Palette, Check } from 'lucide-react';
+import { CABINET_COLOR_PALETTE, isLightColor } from '../../utils/coordinates';
 
 export const CabinetInspectorPanel = ({
   cabinet,
@@ -7,7 +8,8 @@ export const CabinetInspectorPanel = ({
   onUpdateCabinet,
   onDeleteCabinet,
   onDuplicateCabinet,
-  onDeselect
+  onDeselect,
+  onApplyColorToType
 }) => {
   if (!cabinet) {
     return (
@@ -15,7 +17,7 @@ export const CabinetInspectorPanel = ({
         <Sliders className="w-8 h-8 mb-3 opacity-40 text-slate-400" />
         <p className="text-sm font-medium text-slate-400">No Cabinet Selected</p>
         <p className="text-xs mt-1 text-slate-500">
-          Click any cabinet on the canvas to inspect coordinates, dimensions, and materials.
+          Click any cabinet on the canvas to inspect coordinates, dimensions, colors, and materials.
         </p>
       </div>
     );
@@ -42,6 +44,8 @@ export const CabinetInspectorPanel = ({
       rotation: nextRot
     });
   };
+
+  const currentColor = cabinet.finishColor || '#475569';
 
   return (
     <div className="w-80 bg-slate-900 border-l border-slate-800 flex flex-col h-full overflow-y-auto">
@@ -178,10 +182,92 @@ export const CabinetInspectorPanel = ({
           </div>
         </div>
 
+        {/* Shutter Color & Finishes Section */}
+        <div className="border-t border-slate-800 pt-3">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-[11px] font-semibold text-slate-300 uppercase tracking-wide flex items-center space-x-1.5">
+              <Palette className="w-3.5 h-3.5 text-brand-400" />
+              <span>Shutter Color</span>
+            </span>
+            <span className="text-[10px] text-slate-400 font-mono">
+              {currentColor}
+            </span>
+          </div>
+
+          {/* Color Preview & Native Picker Row */}
+          <div className="flex items-center space-x-2 mb-3 bg-slate-800/80 p-2 rounded-lg border border-slate-700">
+            {/* Color Swatch Circle with hidden input */}
+            <label className="relative w-7 h-7 rounded-full cursor-pointer overflow-hidden border-2 border-slate-500 shadow-md flex-shrink-0 hover:scale-105 transition">
+              <input
+                type="color"
+                value={currentColor}
+                onChange={(e) => handleStringChange('finishColor', e.target.value)}
+                className="opacity-0 absolute inset-0 w-full h-full cursor-pointer"
+              />
+              <span
+                className="w-full h-full block"
+                style={{ backgroundColor: currentColor }}
+              />
+            </label>
+
+            {/* Hex Input */}
+            <input
+              type="text"
+              value={currentColor}
+              onChange={(e) => handleStringChange('finishColor', e.target.value)}
+              placeholder="#38bdf8"
+              className="flex-1 bg-slate-900 border border-slate-700 rounded px-2 py-1 text-slate-100 font-mono text-xs focus:border-brand-500 focus:outline-none"
+            />
+          </div>
+
+          {/* Quick Architectural Swatches Grid */}
+          <label className="text-[10px] text-slate-400 block mb-1.5 font-medium">
+            Architectural Palette Swatches
+          </label>
+          <div className="grid grid-cols-6 gap-1.5 mb-3">
+            {CABINET_COLOR_PALETTE.map((swatch) => {
+              const isSelectedColor = currentColor.toLowerCase() === swatch.hex.toLowerCase();
+              return (
+                <button
+                  key={swatch.hex}
+                  type="button"
+                  onClick={() => handleStringChange('finishColor', swatch.hex)}
+                  title={`${swatch.name} (${swatch.hex})`}
+                  className={`w-7 h-7 rounded-md border transition relative flex items-center justify-center ${
+                    isSelectedColor
+                      ? 'border-brand-400 ring-2 ring-brand-500/50 scale-105 shadow-md'
+                      : 'border-slate-700 hover:border-slate-500 hover:scale-105'
+                  }`}
+                  style={{ backgroundColor: swatch.hex }}
+                >
+                  {isSelectedColor && (
+                    <Check
+                      className={`w-3.5 h-3.5 ${
+                        isLightColor(swatch.hex) ? 'text-slate-900' : 'text-white'
+                      }`}
+                    />
+                  )}
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Quick Apply to All Similar Units */}
+          {onApplyColorToType && (
+            <button
+              type="button"
+              onClick={() => onApplyColorToType(cabinet.cabinetType, currentColor)}
+              className="w-full text-[11px] bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-300 hover:text-white py-1 px-2 rounded transition flex items-center justify-center space-x-1"
+            >
+              <span>Apply color to all {cabinet.cabinetType.replace('_', ' ')}s</span>
+            </button>
+          )}
+        </div>
+
         {/* Materials & Finish */}
         <div className="border-t border-slate-800 pt-3">
           <span className="block text-[11px] font-semibold text-slate-300 mb-2 uppercase tracking-wide">
-            Materials & Finishes
+            Carcass & Core Materials
           </span>
 
           <div className="space-y-2">
@@ -200,7 +286,7 @@ export const CabinetInspectorPanel = ({
             </div>
 
             <div>
-              <label className="text-[10px] text-slate-400 block mb-0.5">Shutter Material</label>
+              <label className="text-[10px] text-slate-400 block mb-0.5">Shutter Finish Type</label>
               <select
                 value={cabinet.shutterMaterial || 'LAMINATE'}
                 onChange={(e) => handleStringChange('shutterMaterial', e.target.value)}

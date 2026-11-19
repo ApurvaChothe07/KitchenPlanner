@@ -308,3 +308,47 @@ export const PREDEFINED_CABINETS = [
     ]
   }
 ];
+
+/**
+ * High-end architectural kitchen finishes and modular shutter colors
+ */
+export const CABINET_COLOR_PALETTE = [
+  // Whites & Creams
+  { name: 'Pure White', hex: '#f8fafc', category: 'Whites & Creams' },
+  { name: 'Warm Alabaster', hex: '#f1ede4', category: 'Whites & Creams' },
+  { name: 'Linen Oat', hex: '#e2ded8', category: 'Whites & Creams' },
+  { name: 'Cloud Grey', hex: '#94a3b8', category: 'Greys & Slates' },
+  // Greys & Slates
+  { name: 'Slate Grey', hex: '#64748b', category: 'Greys & Slates' },
+  { name: 'Charcoal', hex: '#334155', category: 'Greys & Slates' },
+  { name: 'Matte Anthracite', hex: '#1e293b', category: 'Greys & Slates' },
+  { name: 'Pitch Black', hex: '#0f172a', category: 'Greys & Slates' },
+  // Warm Woods & Earth Tones
+  { name: 'Natural Oak', hex: '#d4a373', category: 'Woods & Earth' },
+  { name: 'Warm Walnut', hex: '#8c5e3c', category: 'Woods & Earth' },
+  { name: 'Espresso Bark', hex: '#4a2e1b', category: 'Woods & Earth' },
+  { name: 'Terracotta Rust', hex: '#b45309', category: 'Woods & Earth' },
+  // Designer Luxury Accents
+  { name: 'Navy Blue', hex: '#1e3a5f', category: 'Designer Accents' },
+  { name: 'Sky Cyan', hex: '#38bdf8', category: 'Designer Accents' },
+  { name: 'Sage Green', hex: '#65816b', category: 'Designer Accents' },
+  { name: 'Emerald Green', hex: '#064e3b', category: 'Designer Accents' },
+  { name: 'Warm Ochre', hex: '#d97706', category: 'Designer Accents' },
+  { name: 'Blush Rose', hex: '#fda4af', category: 'Designer Accents' }
+];
+
+/**
+ * Determine if a hex color is light or dark for high-contrast text rendering
+ */
+export const isLightColor = (hex) => {
+  if (!hex || typeof hex !== 'string') return false;
+  const cleanHex = hex.replace('#', '');
+  if (cleanHex.length !== 6 && cleanHex.length !== 3) return false;
+  const fullHex = cleanHex.length === 3
+    ? cleanHex.split('').map(c => c + c).join('')
+    : cleanHex;
+  const r = parseInt(fullHex.substr(0, 2), 16) || 0;
+  const g = parseInt(fullHex.substr(2, 2), 16) || 0;
+  const b = parseInt(fullHex.substr(4, 2), 16) || 0;
+  return (r * 299 + g * 587 + b * 114) / 1000 > 150;
+};
