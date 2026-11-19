@@ -7,6 +7,8 @@ import {
   isCabinetColliding,
   findCollisions,
   to3DCoordinates,
+  from3DCoordinates,
+  from3DRotation,
   PREDEFINED_CABINETS
 } from './coordinates.js';
 
@@ -93,4 +95,49 @@ assert.strictEqual(res3D.dimensions[1], 0.86, '3D height should be 0.86m');
 assert.strictEqual(res3D.dimensions[2], 0.6, '3D depth should be 0.6m');
 console.log('✓ 2D to 3D metric coordinate and centering transform verified');
 
-console.log('\nALL 2D COORDINATE AND COLLISION TESTS PASSED SUCCESSFULLY!');
+// 8. 3D to 2D Inverse Transform Verification
+const back2D = from3DCoordinates(
+  res3D.position[0],
+  res3D.position[1],
+  res3D.position[2],
+  cornerCab,
+  4000,
+  3000,
+  false // No snapping for exact inverse check
+);
+assert.strictEqual(back2D.posX, cornerCab.posX, 'Inverse X must match original posX 0mm');
+assert.strictEqual(back2D.posY, cornerCab.posY, 'Inverse Y must match original posY 0mm');
+assert.strictEqual(back2D.posZ, 0, 'Base cabinet posZ must be 0mm');
+
+// Test with off-center cabinet, 50mm grid snapping and boundary clamping
+const offCenterCab = {
+  posX: 1250,
+  posY: 850,
+  posZ: 0,
+  widthMm: 600,
+  depthMm: 600,
+  heightMm: 860,
+  cabinetType: 'BASE'
+};
+const off3D = to3DCoordinates(offCenterCab, 4000, 3000);
+const recovered = from3DCoordinates(
+  off3D.position[0] + 0.02, // Add slight 20mm jitter
+  off3D.position[1],
+  off3D.position[2] - 0.02,
+  offCenterCab,
+  4000,
+  3000,
+  true, // snapGrid
+  50
+);
+assert.strictEqual(recovered.posX, 1250, 'Jittered X should snap to 1250mm');
+assert.strictEqual(recovered.posY, 850, 'Jittered Y should snap to 850mm');
+
+// Test rotation conversion
+assert.strictEqual(from3DRotation(0), 0);
+assert.strictEqual(from3DRotation(-Math.PI / 2), 90);
+assert.strictEqual(from3DRotation(-Math.PI), 180);
+assert.strictEqual(from3DRotation(-Math.PI * 1.5), 270);
+console.log('✓ 3D to 2D inverse coordinate, snapping, and rotation transform verified');
+
+console.log('\nALL 2D AND 3D COORDINATE TESTS PASSED SUCCESSFULLY!');

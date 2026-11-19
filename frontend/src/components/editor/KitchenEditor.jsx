@@ -131,13 +131,17 @@ export const KitchenEditor = ({
     setIsDirty(true);
   };
 
-  // Cabinet Move / Drag Handler
-  const handleMoveCabinet = (id, posX, posY) => {
+  // Cabinet Move / Drag Handler (supports 2D and 3D)
+  const handleMoveCabinet = (id, posX, posY, posZ, rotation) => {
     setDesign((prev) => ({
       ...prev,
-      cabinets: prev.cabinets.map((cab) =>
-        cab.id === id ? { ...cab, posX, posY } : cab
-      )
+      cabinets: prev.cabinets.map((cab) => {
+        if (cab.id !== id) return cab;
+        const updated = { ...cab, posX, posY };
+        if (posZ !== undefined && posZ !== null) updated.posZ = posZ;
+        if (rotation !== undefined && rotation !== null) updated.rotation = rotation;
+        return updated;
+      })
     }));
     setIsDirty(true);
   };
@@ -317,6 +321,10 @@ export const KitchenEditor = ({
               cabinets={design.cabinets}
               selectedCabinetId={selectedCabinetId}
               onSelectCabinet={setSelectedCabinetId}
+              onMoveCabinet={handleMoveCabinet}
+              onUpdateCabinet={handleUpdateCabinet}
+              onDeleteCabinet={handleDeleteCabinet}
+              onDuplicateCabinet={handleDuplicateCabinet}
               onFallbackTo2D={() => setViewMode('2D')}
             />
           )}

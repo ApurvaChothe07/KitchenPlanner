@@ -1,9 +1,22 @@
-import React, { useRef, useState, Component } from 'react';
+import React, { useRef, useState, useEffect, Component } from 'react';
 import { Canvas } from '@react-three/fiber';
 import { OrbitControls } from '@react-three/drei';
 import { Room3D } from './Room3D';
 import { CabinetMesh } from './CabinetMesh';
-import { Rotate3d, Compass, Eye, AlertTriangle } from 'lucide-react';
+import {
+  Rotate3d,
+  Compass,
+  Eye,
+  AlertTriangle,
+  Move,
+  RotateCw,
+  Grid,
+  Trash2,
+  Copy,
+  ArrowUp,
+  ArrowDown,
+  X
+} from 'lucide-react';
 
 // Error Boundary for WebGL Rendering Failures
 class WebGLErrorBoundary extends Component {
@@ -49,13 +62,78 @@ export const KitchenScene3D = ({
   cabinets,
   selectedCabinetId,
   onSelectCabinet,
+  onMoveCabinet,
+  onUpdateCabinet,
+  onDeleteCabinet,
+  onDuplicateCabinet,
   onFallbackTo2D
 }) => {
   const controlsRef = useRef(null);
+  const [transformMode, setTransformMode] = useState('translate'); // 'translate' | 'rotate'
+  const [snapEnabled, setSnapEnabled] = useState(true);
 
   const roomWm = roomWidthMm / 1000;
   const roomLm = roomLengthMm / 1000;
   const roomHm = roomHeightMm / 1000;
+
+  const selectedCabinet = cabinets.find((c) => c.id === selectedCabinetId);
+  const isWall = selectedCabinet?.cabinetType === 'WALL';
+
+  // Desktop Keyboard Shortcuts in 3D
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (['INPUT', 'TEXTAREA', 'SELECT'].includes(e.target.tagName)) return;
+
+      if (e.key === 'Escape') {
+        onSelectCabinet(null);
+      } else if (e.key === 'Delete' || e.key === 'Backspace') {
+        if (selectedCabinetId && onDeleteCabinet) {
+          onDeleteCabinet(selectedCabinetId);
+        }
+      } else if (e.key === 'r' || e.key === 'R') {
+        if (selectedCabinet && onMoveCabinet) {
+          const nextRot = ((selectedCabinet.rotation || 0) + 90) % 360;
+          onMoveCabinet(
+            selectedCabinet.id,
+            selectedCabinet.posX,
+            selectedCabinet.posY,
+            selectedCabinet.posZ,
+            nextRot
+          );
+        }
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [selectedCabinetId, selectedCabinet, onSelectCabinet, onDeleteCabinet, onMoveCabinet]);
+
+  // Quick Action: Rotate 90°
+  const handleRotate90 = () => {
+    if (!selectedCabinet || !onMoveCabinet) return;
+    const nextRot = ((selectedCabinet.rotation || 0) + 90) % 360;
+    onMoveCabinet(
+      selectedCabinet.id,
+      selectedCabinet.posX,
+      selectedCabinet.posY,
+      selectedCabinet.posZ,
+      nextRot
+    );
+  };
+
+  // Quick Action: Elevation Adjustment for Wall units
+  const handleElevate = (deltaMm) => {
+    if (!selectedCabinet || !onMoveCabinet) return;
+    const currentZ = selectedCabinet.posZ || 1450;
+    const maxZ = Math.max(0, roomHeightMm - selectedCabinet.heightMm);
+    const newZ = Math.max(0, Math.min(maxZ, currentZ + deltaMm));
+    onMoveCabinet(
+      selectedCabinet.id,
+      selectedCabinet.posX,
+      selectedCabinet.posY,
+      newZ,
+      selectedCabinet.rotation
+    );
+  };
 
   // Preset camera views
   const handleCameraPreset = (view) => {
@@ -104,15 +182,20 @@ export const KitchenScene3D = ({
             roomHeightMm={roomHeightMm}
           />
 
-          {/* Cabinets */}
+          {/* Cabinets with Direct Drag & 3D Transform Gizmo */}
           {cabinets.map((cab) => (
             <CabinetMesh
               key={cab.id}
               cabinet={cab}
               roomWidthMm={roomWidthMm}
               roomLengthMm={roomLengthMm}
+              roomHeightMm={roomHeightMm}
               isSelected={cab.id === selectedCabinetId}
               onSelect={onSelectCabinet}
+              onMove={onMoveCabinet}
+              transformMode={transformMode}
+              snapEnabled={snapEnabled}
+              controlsRef={controlsRef}
             />
           ))}
 
@@ -123,14 +206,14 @@ export const KitchenScene3D = ({
             target={[0, roomHm * 0.35, 0]}
             minDistance={0.5}
             maxDistance={25}
-            maxPolarAngle={Math.PI / 2 + 0.05} // Do not dip below the floor plane
+            maxPolarAngle={Math.PI / 2 + 0.05} // Do not dip below floor
             dampingFactor={0.08}
           />
         </Canvas>
       </WebGLErrorBoundary>
 
-      {/* Floating 3D Camera Controls & Hint */}
-      <div className="absolute top-4 left-4 flex items-center space-x-1.5 bg-slate-900/85 backdrop-blur border border-slate-700/70 p-1.5 rounded-xl shadow-lg">
+      {/* Floating Camera Presets (Top-Left) */}
+      <div className="absolute top-4 left-4 flex items-center space-x-1.5 bg-slate-900/85 backdrop-blur border border-slate-700/70 p-1.5 rounded-xl shadow-lg z-10">
         <button
           onClick={() => handleCameraPreset('ISO')}
           className="px-2.5 py-1 text-xs text-slate-300 hover:text-white hover:bg-slate-800 rounded-lg transition font-medium flex items-center space-x-1"
@@ -157,13 +240,147 @@ export const KitchenScene3D = ({
         </button>
       </div>
 
-      {/* Navigation Helper Tag */}
-      <div className="absolute bottom-3 right-3 bg-slate-900/80 backdrop-blur-sm border border-slate-700 text-xs px-3 py-1.5 rounded-lg text-slate-300 flex items-center space-x-3 pointer-events-none">
-        <span>Left-click: Orbit</span>
-        <span>•</span>
-        <span>Right-click: Pan</span>
-        <span>•</span>
-        <span>Scroll: Zoom</span>
+      {/* Floating 3D Selected Object Tool Strip (Top-Center) */}
+      {selectedCabinet && (
+        <div className="absolute top-4 left-1/2 -translate-x-1/2 flex items-center space-x-2 bg-slate-900/90 backdrop-blur-md border border-slate-700/80 px-3 py-1.5 rounded-xl shadow-2xl z-20">
+          {/* Cabinet Name Badge */}
+          <div className="flex items-center space-x-1.5 pr-2 border-r border-slate-700">
+            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+            <span className="text-xs font-semibold text-slate-100 max-w-[120px] truncate">
+              {selectedCabinet.cabinetType.replace('_', ' ')}
+            </span>
+            <span className="text-[10px] text-slate-400 font-mono">
+              ({selectedCabinet.posX},{selectedCabinet.posY})
+            </span>
+          </div>
+
+          {/* Mode: Move (Translate Gizmo) */}
+          <button
+            onClick={() => setTransformMode('translate')}
+            className={`px-2.5 py-1 text-xs rounded-lg transition font-medium flex items-center space-x-1 ${
+              transformMode === 'translate'
+                ? 'bg-brand-600 text-white shadow-sm'
+                : 'text-slate-300 hover:text-white hover:bg-slate-800'
+            }`}
+            title="Move / Translate along floor axes (drag arrows or ground plane)"
+          >
+            <Move className="w-3.5 h-3.5" />
+            <span>Move</span>
+          </button>
+
+          {/* Mode: Rotate (Rotation Gizmo) */}
+          <button
+            onClick={() => setTransformMode('rotate')}
+            className={`px-2.5 py-1 text-xs rounded-lg transition font-medium flex items-center space-x-1 ${
+              transformMode === 'rotate'
+                ? 'bg-brand-600 text-white shadow-sm'
+                : 'text-slate-300 hover:text-white hover:bg-slate-800'
+            }`}
+            title="Rotate Gizmo around vertical axis"
+          >
+            <RotateCw className="w-3.5 h-3.5" />
+            <span>Rotate</span>
+          </button>
+
+          {/* Quick Turn: 90° Clockwise */}
+          <button
+            onClick={handleRotate90}
+            className="px-2 py-1 text-xs text-slate-300 hover:text-white hover:bg-slate-800 rounded-lg transition font-medium flex items-center space-x-1"
+            title="Quick Rotate 90° Clockwise (Hotkey: R)"
+          >
+            <RotateCw className="w-3.5 h-3.5 text-amber-400" />
+            <span>90°</span>
+          </button>
+
+          {/* Snap Toggle (50mm / 90°) */}
+          <button
+            onClick={() => setSnapEnabled(!snapEnabled)}
+            className={`px-2 py-1 text-xs rounded-lg transition font-medium flex items-center space-x-1 border ${
+              snapEnabled
+                ? 'border-brand-500/50 bg-brand-950/60 text-brand-300'
+                : 'border-slate-700 bg-slate-800 text-slate-400'
+            }`}
+            title="Toggle 50mm Grid Snapping"
+          >
+            <Grid className="w-3.5 h-3.5" />
+            <span>{snapEnabled ? 'Snap: 50mm' : 'Snap: Off'}</span>
+          </button>
+
+          {/* Wall Cabinet Height Adjustment */}
+          {isWall && (
+            <div className="flex items-center space-x-1 pl-1 border-l border-slate-700">
+              <button
+                onClick={() => handleElevate(100)}
+                className="p-1 text-slate-300 hover:text-white hover:bg-slate-800 rounded transition"
+                title="Raise wall cabinet +100mm"
+              >
+                <ArrowUp className="w-3.5 h-3.5 text-sky-400" />
+              </button>
+              <button
+                onClick={() => handleElevate(-100)}
+                className="p-1 text-slate-300 hover:text-white hover:bg-slate-800 rounded transition"
+                title="Lower wall cabinet -100mm"
+              >
+                <ArrowDown className="w-3.5 h-3.5 text-sky-400" />
+              </button>
+            </div>
+          )}
+
+          {/* Quick Duplicate */}
+          {onDuplicateCabinet && (
+            <button
+              onClick={() => onDuplicateCabinet(selectedCabinet)}
+              className="p-1.5 text-slate-300 hover:text-white hover:bg-slate-800 rounded-lg transition"
+              title="Duplicate Cabinet"
+            >
+              <Copy className="w-3.5 h-3.5" />
+            </button>
+          )}
+
+          {/* Quick Delete */}
+          {onDeleteCabinet && (
+            <button
+              onClick={() => onDeleteCabinet(selectedCabinet.id)}
+              className="p-1.5 text-red-400 hover:text-red-300 hover:bg-red-950/60 rounded-lg transition"
+              title="Delete Cabinet (Hotkey: Delete)"
+            >
+              <Trash2 className="w-3.5 h-3.5" />
+            </button>
+          )}
+
+          {/* Deselect (Close) */}
+          <button
+            onClick={() => onSelectCabinet(null)}
+            className="p-1 text-slate-400 hover:text-slate-200 transition"
+            title="Deselect (Hotkey: Esc)"
+          >
+            <X className="w-3.5 h-3.5" />
+          </button>
+        </div>
+      )}
+
+      {/* Dynamic Interaction & Navigation Helper Badge (Bottom-Right) */}
+      <div className="absolute bottom-3 right-3 bg-slate-900/85 backdrop-blur border border-slate-700/80 text-xs px-3.5 py-2 rounded-xl text-slate-300 flex items-center space-x-2.5 shadow-xl pointer-events-none z-10">
+        {selectedCabinet ? (
+          <>
+            <span className="text-emerald-400 font-medium">● Unit Selected:</span>
+            <span>Click & drag cabinet or gizmo arrows to reposition</span>
+            <span className="text-slate-600">•</span>
+            <span className="text-slate-400">R: Rotate 90°</span>
+            <span className="text-slate-600">•</span>
+            <span className="text-slate-400">Esc: Deselect</span>
+          </>
+        ) : (
+          <>
+            <span>Left-click unit: Select & Drag</span>
+            <span className="text-slate-600">•</span>
+            <span>Left-click floor: Orbit</span>
+            <span className="text-slate-600">•</span>
+            <span>Right-click: Pan</span>
+            <span className="text-slate-600">•</span>
+            <span>Scroll: Zoom</span>
+          </>
+        )}
       </div>
     </div>
   );

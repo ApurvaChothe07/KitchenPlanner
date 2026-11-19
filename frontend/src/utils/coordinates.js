@@ -92,6 +92,84 @@ export const to3DCoordinates = (cabinet, roomWidthMm, roomLengthMm) => {
   };
 };
 
+/**
+ * 3D (metres, centered room origin) to 2D (mm, top-left room origin) Coordinate Transform
+ * Converts 3D world position (x, y, z) in metres back into 2D millimeter domain coordinates.
+ * Also clamps within room walls and optionally snaps to grid step.
+ */
+export const from3DCoordinates = (
+  xM,
+  yM,
+  zM,
+  cabinet,
+  roomWidthMm,
+  roomLengthMm,
+  snapGrid = true,
+  stepMm = 50
+) => {
+  const roomWm = roomWidthMm / 1000;
+  const roomLm = roomLengthMm / 1000;
+
+  // Inverse X transform: centerXMm / 1000 - roomWm / 2 = xM
+  const centerXMm = (xM + roomWm / 2) * 1000;
+  let posX = Math.round(centerXMm - cabinet.widthMm / 2);
+
+  // Inverse Z transform: centerYMm / 1000 - roomLm / 2 = zM
+  const centerYMm = (zM + roomLm / 2) * 1000;
+  let posY = Math.round(centerYMm - cabinet.depthMm / 2);
+
+  // Inverse Y elevation transform: (posZ + heightMm / 2) / 1000 = yM
+  const centerZElevationMm = yM * 1000;
+  let posZ = Math.round(centerZElevationMm - cabinet.heightMm / 2);
+
+  // For Base/Tall cabinets, posZ sits on the floor (0)
+  if (cabinet.cabinetType !== 'WALL') {
+    posZ = 0;
+  } else {
+    posZ = Math.max(0, posZ);
+  }
+
+  // Snap to grid if requested
+  if (snapGrid && stepMm > 0) {
+    posX = snapToGridMm(posX, stepMm);
+    posY = snapToGridMm(posY, stepMm);
+    if (cabinet.cabinetType === 'WALL') {
+      posZ = snapToGridMm(posZ, stepMm);
+    }
+  }
+
+  // Clamp within room boundaries
+  const clamped = clampWithinRoom(
+    posX,
+    posY,
+    cabinet.widthMm,
+    cabinet.depthMm,
+    roomWidthMm,
+    roomLengthMm
+  );
+
+  return {
+    posX: clamped.posX,
+    posY: clamped.posY,
+    posZ
+  };
+};
+
+/**
+ * 3D rotation (radians around Y) to 2D rotation (degrees 0-360)
+ */
+export const from3DRotation = (rotationYRad, snapTo90 = false) => {
+  let deg = (-Math.round((rotationYRad * 180) / Math.PI)) % 360;
+  if (deg < 0) deg += 360;
+  if (deg === 0 || Object.is(deg, -0)) deg = 0;
+
+  if (snapTo90) {
+    deg = (Math.round(deg / 90) * 90) % 360;
+    if (deg === 0) deg = 0;
+  }
+  return deg;
+};
+
 // Predefined Modular Cabinet Catalog (Standard architectural mm dimensions)
 export const PREDEFINED_CABINETS = [
   {
