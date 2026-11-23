@@ -10,6 +10,7 @@ import { ComparisonModal } from '../estimate/ComparisonModal';
 import { QuotationsModal } from '../quotation/QuotationsModal';
 import { designService } from '../../services/designService';
 import { clampWithinRoom, isCabinetColliding } from '../../utils/coordinates';
+import { generateLayoutCabinets } from '../../utils/layoutTemplates';
 import { AlertCircle } from 'lucide-react';
 
 export const KitchenEditor = ({
@@ -92,8 +93,53 @@ export const KitchenEditor = ({
     setIsDirty(true);
   };
 
+  // Layout Shape Change Handler
   const handleChangeLayoutType = (type) => {
-    setDesign((prev) => ({ ...prev, layoutType: type }));
+    setDesign((prev) => {
+      // If room is empty (0 cabinets), automatically populate starter layout for that shape!
+      if (prev.cabinets.length === 0) {
+        const autoCabinets = generateLayoutCabinets(
+          type,
+          prev.roomWidthMm,
+          prev.roomLengthMm,
+          prev.roomHeightMm
+        );
+        return {
+          ...prev,
+          layoutType: type,
+          cabinets: autoCabinets
+        };
+      }
+      // If cabinets already exist, update room walls and blueprint guides
+      return { ...prev, layoutType: type };
+    });
+    setIsDirty(true);
+  };
+
+  // Auto-Arrange Cabinets into selected Layout Shape
+  const handleAutoArrange = () => {
+    const hasCabinets = design.cabinets.length > 0;
+    if (
+      hasCabinets &&
+      !window.confirm(
+        `Auto-arrange cabinets into a ${design.layoutType.replace('_', ' ')} layout? This will place modular base, sink, hob, and wall units along the active walls.`
+      )
+    ) {
+      return;
+    }
+
+    const arranged = generateLayoutCabinets(
+      design.layoutType,
+      design.roomWidthMm,
+      design.roomLengthMm,
+      design.roomHeightMm
+    );
+
+    setDesign((prev) => ({
+      ...prev,
+      cabinets: arranged
+    }));
+    setSelectedCabinetId(null);
     setIsDirty(true);
   };
 
@@ -310,6 +356,7 @@ export const KitchenEditor = ({
         layoutType={design.layoutType}
         onChangeDimensions={handleChangeDimensions}
         onChangeLayoutType={handleChangeLayoutType}
+        onAutoArrangeLayout={handleAutoArrange}
       />
 
       {/* Main 3-Column Work Area */}
@@ -323,6 +370,7 @@ export const KitchenEditor = ({
             <KitchenCanvas
               roomWidthMm={design.roomWidthMm}
               roomLengthMm={design.roomLengthMm}
+              layoutType={design.layoutType}
               cabinets={design.cabinets}
               selectedCabinetId={selectedCabinetId}
               onSelectCabinet={setSelectedCabinetId}
@@ -333,6 +381,7 @@ export const KitchenEditor = ({
               roomWidthMm={design.roomWidthMm}
               roomLengthMm={design.roomLengthMm}
               roomHeightMm={design.roomHeightMm}
+              layoutType={design.layoutType}
               cabinets={design.cabinets}
               selectedCabinetId={selectedCabinetId}
               onSelectCabinet={setSelectedCabinetId}

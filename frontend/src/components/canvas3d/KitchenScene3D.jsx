@@ -62,6 +62,7 @@ export const KitchenScene3D = ({
   roomWidthMm,
   roomLengthMm,
   roomHeightMm,
+  layoutType = 'L_SHAPED',
   cabinets,
   selectedCabinetId,
   onSelectCabinet,
@@ -188,6 +189,7 @@ export const KitchenScene3D = ({
             roomWidthMm={roomWidthMm}
             roomLengthMm={roomLengthMm}
             roomHeightMm={roomHeightMm}
+            layoutType={layoutType}
           />
 
           {/* Cabinets with Direct Drag & 3D Transform Gizmo */}

@@ -7,6 +7,7 @@ import { isCabinetColliding } from '../../utils/coordinates';
 export const KitchenCanvas = ({
   roomWidthMm,
   roomLengthMm,
+  layoutType = 'L_SHAPED',
   cabinets,
   selectedCabinetId,
   onSelectCabinet,
@@ -81,6 +82,7 @@ export const KitchenCanvas = ({
               roomLengthMm={roomLengthMm}
               scale={scale}
               gridStepMm={100}
+              layoutType={layoutType}
             />
 
             {/* Cabinets Layer */}
