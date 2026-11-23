@@ -1,5 +1,5 @@
 import React from 'react';
-import { Save, RefreshCw, ArrowLeft, CheckCircle2, AlertCircle, Clock, Layers, Box, Calculator, GitCompare, FileText } from 'lucide-react';
+import { Save, RefreshCw, ArrowLeft, CheckCircle2, AlertCircle, Clock, Layers, Box, Calculator, GitCompare, FileText, Sparkles, Camera } from 'lucide-react';
 
 export const EditorToolbar = ({
   projectName,
@@ -65,6 +65,17 @@ export const EditorToolbar = ({
           >
             <Box className="w-3.5 h-3.5" />
             <span>3D View</span>
+          </button>
+          <button
+            onClick={() => onChangeViewMode('REALISTIC')}
+            className={`flex items-center space-x-1.5 px-3 py-1 rounded-lg text-xs font-semibold transition ${
+              viewMode === 'REALISTIC'
+                ? 'bg-gradient-to-r from-amber-500 to-orange-500 text-slate-950 font-bold shadow-sm'
+                : 'text-slate-400 hover:text-slate-200'
+            }`}
+          >
+            <Sparkles className="w-3.5 h-3.5 text-amber-400" />
+            <span>Realistic Studio</span>
           </button>
         </div>
 

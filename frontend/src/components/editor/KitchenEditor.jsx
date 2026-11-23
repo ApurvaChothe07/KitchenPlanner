@@ -11,6 +11,7 @@ import { QuotationsModal } from '../quotation/QuotationsModal';
 import { designService } from '../../services/designService';
 import { clampWithinRoom, isCabinetColliding } from '../../utils/coordinates';
 import { generateLayoutCabinets } from '../../utils/layoutTemplates';
+import { RealisticVisualizer } from '../studio/RealisticVisualizer';
 import { AlertCircle } from 'lucide-react';
 
 export const KitchenEditor = ({
@@ -348,23 +349,27 @@ export const KitchenEditor = ({
         onOpenQuotations={() => setIsQuotationsOpen(true)}
       />
 
-      {/* Room Dimensions Bar */}
-      <RoomDimensionsPanel
-        roomWidthMm={design.roomWidthMm}
-        roomLengthMm={design.roomLengthMm}
-        roomHeightMm={design.roomHeightMm}
-        layoutType={design.layoutType}
-        onChangeDimensions={handleChangeDimensions}
-        onChangeLayoutType={handleChangeLayoutType}
-        onAutoArrangeLayout={handleAutoArrange}
-      />
+      {/* Room Dimensions Bar (Visible in 2D & 3D planning modes) */}
+      {viewMode !== 'REALISTIC' && (
+        <RoomDimensionsPanel
+          roomWidthMm={design.roomWidthMm}
+          roomLengthMm={design.roomLengthMm}
+          roomHeightMm={design.roomHeightMm}
+          layoutType={design.layoutType}
+          onChangeDimensions={handleChangeDimensions}
+          onChangeLayoutType={handleChangeLayoutType}
+          onAutoArrangeLayout={handleAutoArrange}
+        />
+      )}
 
-      {/* Main 3-Column Work Area */}
+      {/* Main Work Area */}
       <div className="flex-1 flex overflow-hidden">
-        {/* Left: Cabinet Catalogue */}
-        <CabinetCatalogPanel onAddCabinet={handleAddCabinet} />
+        {/* Left: Cabinet Catalogue (Visible in 2D & 3D planning modes) */}
+        {viewMode !== 'REALISTIC' && (
+          <CabinetCatalogPanel onAddCabinet={handleAddCabinet} />
+        )}
 
-        {/* Center: Interactive Viewport (2D Konva or 3D React Three Fiber) */}
+        {/* Center: Interactive Viewport (2D Konva, 3D React Three Fiber, or Realistic Studio) */}
         <div className="flex-1 h-full relative">
           {viewMode === '2D' ? (
             <KitchenCanvas
@@ -376,7 +381,7 @@ export const KitchenEditor = ({
               onSelectCabinet={setSelectedCabinetId}
               onMoveCabinet={handleMoveCabinet}
             />
-          ) : (
+          ) : viewMode === '3D' ? (
             <KitchenScene3D
               roomWidthMm={design.roomWidthMm}
               roomLengthMm={design.roomLengthMm}
@@ -391,19 +396,27 @@ export const KitchenEditor = ({
               onDuplicateCabinet={handleDuplicateCabinet}
               onFallbackTo2D={() => setViewMode('2D')}
             />
+          ) : (
+            <RealisticVisualizer
+              design={design}
+              project={project}
+              onBackTo3D={() => setViewMode('3D')}
+            />
           )}
         </div>
 
-        {/* Right: Selected Cabinet Properties Inspector */}
-        <CabinetInspectorPanel
-          cabinet={selectedCabinet}
-          isColliding={isSelectedColliding}
-          onUpdateCabinet={handleUpdateCabinet}
-          onDeleteCabinet={handleDeleteCabinet}
-          onDuplicateCabinet={handleDuplicateCabinet}
-          onDeselect={() => setSelectedCabinetId(null)}
-          onApplyColorToType={handleApplyColorToType}
-        />
+        {/* Right: Selected Cabinet Properties Inspector (Visible in 2D & 3D planning modes) */}
+        {viewMode !== 'REALISTIC' && (
+          <CabinetInspectorPanel
+            cabinet={selectedCabinet}
+            isColliding={isSelectedColliding}
+            onUpdateCabinet={handleUpdateCabinet}
+            onDeleteCabinet={handleDeleteCabinet}
+            onDuplicateCabinet={handleDuplicateCabinet}
+            onDeselect={() => setSelectedCabinetId(null)}
+            onApplyColorToType={handleApplyColorToType}
+          />
+        )}
       </div>
 
       {/* Cost Estimation Modal */}
