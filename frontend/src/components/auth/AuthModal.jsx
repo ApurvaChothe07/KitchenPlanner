@@ -54,7 +54,36 @@ export const AuthModal = ({ onSuccess }) => {
           </div>
         )}
 
+        {/* Quick Credentials Info Box */}
+        {!isRegister && (
+          <div className="mb-4 p-2.5 bg-slate-800/80 border border-slate-700/80 rounded-xl flex items-center justify-between text-[11px] text-slate-300 shadow-sm">
+            <div>
+              <span className="text-brand-400 font-semibold">Demo Login: </span>
+              <span className="font-mono text-slate-200">apurvachothe@gmail.com</span>
+              <div className="text-[10px] text-slate-400 mt-0.5">
+                Password: <span className="font-mono text-emerald-400 font-bold">Password123!</span>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => {
+                setEmail('apurvachothe@gmail.com');
+                setPassword('Password123!');
+                setError('');
+              }}
+              className="text-[11px] bg-brand-600 hover:bg-brand-500 text-white px-2.5 py-1 rounded-lg transition font-medium shadow"
+            >
+              Auto-Fill
+            </button>
+          </div>
+        )}
+
         <form onSubmit={handleSubmit} className="space-y-3.5 text-xs">
+          {isRegister && (
+            <div className="mb-2 p-2 bg-slate-800/60 border border-slate-700/60 rounded-lg text-[11px] text-slate-400 text-center">
+              Choose any password (min 6 characters, e.g. <span className="font-mono text-emerald-400">Password123!</span>)
+            </div>
+          )}
           {isRegister && (
             <div>
               <label className="block text-slate-300 font-medium mb-1">Full Name</label>
@@ -95,7 +124,7 @@ export const AuthModal = ({ onSuccess }) => {
                 type="password"
                 required
                 minLength={6}
-                placeholder="At least 6 characters"
+                placeholder="At least 6 characters (e.g. Password123!)"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 className="w-full bg-slate-800 border border-slate-700 rounded-lg pl-9 pr-3 py-2 text-white placeholder-slate-500 focus:outline-none focus:border-brand-500"

@@ -3,10 +3,14 @@ package com.kitchencraft.config;
 import com.kitchencraft.entity.Material;
 import com.kitchencraft.entity.MaterialCategory;
 import com.kitchencraft.entity.MaterialUnit;
+import com.kitchencraft.entity.Role;
+import com.kitchencraft.entity.User;
 import com.kitchencraft.repository.MaterialRepository;
+import com.kitchencraft.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.CommandLineRunner;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 
 import java.math.BigDecimal;
@@ -18,9 +22,15 @@ import java.util.List;
 public class DataInitializer implements CommandLineRunner {
 
     private final MaterialRepository materialRepository;
+    private final UserRepository userRepository;
+    private final PasswordEncoder passwordEncoder;
 
     @Override
     public void run(String... args) {
+        // Seed standard accounts with Password123!
+        seedUserAccount("apurvachothe@gmail.com", "Apurva Chothe", "Password123!");
+        seedUserAccount("demo@kitchencraft.com", "Demo Designer", "Password123!");
+
         if (materialRepository.count() == 0) {
             log.info("Material catalogue is empty. Seeding standard benchmark materials...");
 
@@ -173,5 +183,26 @@ public class DataInitializer implements CommandLineRunner {
             materialRepository.saveAll(defaultMaterials);
             log.info("Successfully seeded {} benchmark modular materials into database.", defaultMaterials.size());
         }
+    }
+
+    private void seedUserAccount(String email, String fullName, String password) {
+        userRepository.findByEmail(email).ifPresentOrElse(
+                user -> {
+                    user.setPasswordHash(passwordEncoder.encode(password));
+                    user.setActive(true);
+                    userRepository.save(user);
+                    log.info("Synchronized login password for {} ({})", email, password);
+                },
+                () -> {
+                    userRepository.save(User.builder()
+                            .fullName(fullName)
+                            .email(email)
+                            .passwordHash(passwordEncoder.encode(password))
+                            .role(Role.ROLE_USER)
+                            .active(true)
+                            .build());
+                    log.info("Created user account for {} with password: {}", email, password);
+                }
+        );
     }
 }
