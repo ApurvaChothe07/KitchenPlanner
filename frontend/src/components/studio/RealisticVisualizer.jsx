@@ -15,15 +15,23 @@ import {
   Box,
   Check,
   ChevronRight,
-  Info
+  Info,
+  ArrowLeft
 } from 'lucide-react';
 import { RealisticScene3D } from './RealisticScene3D';
+import { CABINET_COLOR_PALETTE, isLightColor } from '../../utils/coordinates';
 
 // Clean neutral empty room template for instant preview before uploading custom photo
 const DEFAULT_ROOM_TEMPLATE =
   'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="1000" viewBox="0 0 1600 1000"><defs><linearGradient id="wall" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stop-color="%23f1f5f9"/><stop offset="100%" stop-color="%23e2e8f0"/></linearGradient><linearGradient id="floor" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stop-color="%23cbd5e1"/><stop offset="100%" stop-color="%2394a3b8"/></linearGradient><linearGradient id="sun" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="%23ffffff" stop-opacity="0.6"/><stop offset="100%" stop-color="%23ffffff" stop-opacity="0"/></linearGradient></defs><rect width="1600" height="680" fill="url(%23wall)"/><polygon points="0,680 1600,680 1600,1000 0,1000" fill="url(%23floor)"/><line x1="0" y1="680" x2="1600" y2="680" stroke="%2364748b" stroke-width="4"/><polygon points="200,680 700,680 1100,1000 0,1000" fill="url(%23sun)"/></svg>';
 
-export const RealisticVisualizer = ({ design, project, onBackTo3D }) => {
+export const RealisticVisualizer = ({
+  design,
+  project,
+  onBackTo3D,
+  onUpdateCabinet,
+  onApplyColorToType
+}) => {
   const sceneRef = useRef(null);
   const containerRef = useRef(null);
   const fileInputRef = useRef(null);
@@ -39,11 +47,15 @@ export const RealisticVisualizer = ({ design, project, onBackTo3D }) => {
   const [cameraPreset, setCameraPreset] = useState('FRONT'); // 'FRONT' | 'CORRIDOR' | 'SHOWCASE' | 'ISO'
 
   // Architectural Finish Controls
-  const [finishStyle, setFinishStyle] = useState('SAGE_GLOSS'); // 'SAGE_GLOSS' | 'ALABASTER' | 'CHARCOAL' | 'CUSTOM'
+  // Default to 'CUSTOM' to automatically reflect individual component colors chosen in 3D scene
+  const [finishStyle, setFinishStyle] = useState('CUSTOM'); // 'CUSTOM' (per-component 3D colors) | 'SAGE_GLOSS' | 'ALABASTER' | 'CHARCOAL'
   const [countertopStyle, setCountertopStyle] = useState('TERRAZZO'); // 'TERRAZZO' | 'WHITE_QUARTZ' | 'BLACK_GRANITE'
   const [lightingPreset, setLightingPreset] = useState('WARM_EVENING'); // 'WARM_EVENING' | 'BRIGHT_DAYLIGHT' | 'STUDIO_CLEAN'
   const [includeAppliances, setIncludeAppliances] = useState(true);
-  const [enableGlassShowcase, setEnableGlassShowcase] = useState(true);
+  const [enableGlassShowcase, setEnableGlassShowcase] = useState(false);
+
+  // Selected cabinet for live inspection / color tweaking inside studio
+  const [selectedCabinetId, setSelectedCabinetId] = useState(null);
 
   // AR Photo Calibration (Alignment with user room photo)
   const [calibration, setCalibration] = useState({
@@ -64,6 +76,21 @@ export const RealisticVisualizer = ({ design, project, onBackTo3D }) => {
     const wallCount = design.cabinets.filter((c) => c.cabinetType === 'WALL').length;
     const tallCount = design.cabinets.filter((c) => c.cabinetType === 'TALL').length;
     return { baseCount, wallCount, tallCount, total: design.cabinets.length };
+  }, [design.cabinets]);
+
+  // Selected cabinet entity
+  const selectedCabinet = useMemo(() => {
+    return design.cabinets?.find((c) => c.id === selectedCabinetId) || null;
+  }, [design.cabinets, selectedCabinetId]);
+
+  // Breakdown of colors currently present across 3D components
+  const detectedColors = useMemo(() => {
+    const map = new Map();
+    (design.cabinets || []).forEach((c) => {
+      const col = (c.finishColor || '#475569').toLowerCase();
+      map.set(col, (map.get(col) || 0) + 1);
+    });
+    return Array.from(map.entries()).map(([color, count]) => ({ color, count }));
   }, [design.cabinets]);
 
   // Handle Photo Upload
@@ -106,6 +133,17 @@ export const RealisticVisualizer = ({ design, project, onBackTo3D }) => {
       {/* ============================================================ */}
       <div className="h-13 bg-slate-900 border-b border-slate-800 px-4 flex items-center justify-between flex-shrink-0 z-20">
         <div className="flex items-center space-x-3">
+          {onBackTo3D && (
+            <button
+              onClick={onBackTo3D}
+              className="flex items-center space-x-1.5 px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white rounded-lg text-xs font-semibold border border-slate-700 transition"
+              title="Return to interactive 3D floor planner"
+            >
+              <ArrowLeft className="w-3.5 h-3.5" />
+              <span>Back to 3D View</span>
+            </button>
+          )}
+
           <div className="flex items-center space-x-2 bg-gradient-to-r from-amber-500/20 to-orange-500/20 border border-amber-500/30 px-3 py-1 rounded-full">
             <Sparkles className="w-4 h-4 text-amber-400" />
             <span className="text-xs font-bold text-amber-300 uppercase tracking-wider">
@@ -368,33 +406,57 @@ export const RealisticVisualizer = ({ design, project, onBackTo3D }) => {
 
           {/* C. Architectural Materials & Finishes */}
           <div className="border-t border-slate-800 pt-3 space-y-3">
-            <span className="font-semibold text-slate-200 uppercase tracking-wide text-[11px] block">
-              Architectural Finishes
-            </span>
+            <div className="flex items-center justify-between">
+              <span className="font-semibold text-slate-200 uppercase tracking-wide text-[11px] block">
+                Architectural Finishes
+              </span>
+              {finishStyle === 'CUSTOM' ? (
+                <span className="text-[10px] text-emerald-300 bg-emerald-950/80 border border-emerald-800 px-2 py-0.5 rounded-full font-medium">
+                  3D Colors Active
+                </span>
+              ) : (
+                <button
+                  onClick={() => setFinishStyle('CUSTOM')}
+                  className="text-[10px] text-amber-400 hover:underline flex items-center space-x-1"
+                >
+                  <RotateCcw className="w-2.5 h-2.5" />
+                  <span>Restore 3D Colors</span>
+                </button>
+              )}
+            </div>
 
             {/* Shutter Finish Tone */}
             <div>
               <label className="text-[10px] text-slate-400 block mb-1">Cabinet Shutter Finish</label>
               <div className="grid grid-cols-2 gap-1.5">
                 {[
-                  { id: 'SAGE_GLOSS', name: 'Sage Olive', desc: 'Gloss Acrylic', color: '#68846f' },
-                  { id: 'ALABASTER', name: 'Alabaster', desc: 'Warm Cream', color: '#f1ede4' },
-                  { id: 'CHARCOAL', name: 'Charcoal', desc: 'Matte Slate', color: '#1e293b' },
-                  { id: 'CUSTOM', name: 'Custom Finishes', desc: 'From 3D Design', color: '#38bdf8' }
+                  {
+                    id: 'CUSTOM',
+                    name: '3D Design Colors',
+                    desc: 'Per-Component (Live)',
+                    isMulti: true
+                  },
+                  { id: 'SAGE_GLOSS', name: 'Sage Olive', desc: 'Gloss Acrylic Theme', color: '#68846f' },
+                  { id: 'ALABASTER', name: 'Alabaster', desc: 'Warm Cream Theme', color: '#f1ede4' },
+                  { id: 'CHARCOAL', name: 'Charcoal', desc: 'Matte Slate Theme', color: '#1e293b' }
                 ].map((item) => (
                   <button
                     key={item.id}
                     onClick={() => setFinishStyle(item.id)}
                     className={`p-1.5 rounded-lg border text-left flex items-center space-x-2 transition ${
                       finishStyle === item.id
-                        ? 'border-amber-500 bg-amber-950/40 text-amber-200'
+                        ? 'border-amber-500 bg-amber-950/40 text-amber-200 shadow-sm'
                         : 'border-slate-800 bg-slate-800/60 text-slate-300 hover:border-slate-700'
                     }`}
                   >
-                    <span
-                      className="w-3.5 h-3.5 rounded-full border border-white/20 flex-shrink-0"
-                      style={{ backgroundColor: item.color }}
-                    />
+                    {item.isMulti ? (
+                      <span className="w-3.5 h-3.5 rounded-full bg-gradient-to-tr from-sky-400 via-amber-400 to-emerald-400 border border-white/20 flex-shrink-0" />
+                    ) : (
+                      <span
+                        className="w-3.5 h-3.5 rounded-full border border-white/20 flex-shrink-0"
+                        style={{ backgroundColor: item.color }}
+                      />
+                    )}
                     <div className="truncate">
                       <div className="text-[11px] font-semibold truncate leading-tight">{item.name}</div>
                       <div className="text-[9px] text-slate-400 truncate">{item.desc}</div>
@@ -403,6 +465,147 @@ export const RealisticVisualizer = ({ design, project, onBackTo3D }) => {
                 ))}
               </div>
             </div>
+
+            {/* Detected 3D Component Colors Summary */}
+            <div className="bg-slate-950/70 border border-slate-800/80 rounded-xl p-2.5">
+              <div className="flex items-center justify-between mb-1.5">
+                <span className="text-[10px] font-semibold text-slate-300 uppercase tracking-wider flex items-center space-x-1">
+                  <Palette className="w-3 h-3 text-amber-400" />
+                  <span>3D Design Colors</span>
+                </span>
+                <span className="text-[9px] text-slate-400">{stats.total} components</span>
+              </div>
+              <div className="flex flex-wrap gap-1.5 mb-1.5">
+                {detectedColors.map(({ color, count }) => (
+                  <div
+                    key={color}
+                    className="flex items-center space-x-1 bg-slate-800/90 border border-slate-700 px-2 py-0.5 rounded-md text-[10px] text-slate-200"
+                    title={`${count} component${count > 1 ? 's' : ''} using ${color}`}
+                  >
+                    <span
+                      className="w-2.5 h-2.5 rounded-full border border-black/30"
+                      style={{ backgroundColor: color }}
+                    />
+                    <span className="font-mono text-[9px] uppercase">{color}</span>
+                    <span className="text-slate-400 font-medium">({count})</span>
+                  </div>
+                ))}
+              </div>
+              <p className="text-[9px] text-slate-400 leading-tight">
+                Click any cabinet in the realistic scene to inspect or modify its color in real time.
+              </p>
+            </div>
+
+            {/* Selected Component Quick-Color Inspector */}
+            {selectedCabinet && (
+              <div className="bg-slate-950 border border-amber-500/50 rounded-xl p-3 space-y-2.5 shadow-lg">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-1.5">
+                    <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse" />
+                    <span className="font-semibold text-slate-100 text-xs truncate max-w-[170px]">
+                      {selectedCabinet.cabinetType.replace('_', ' ')}
+                    </span>
+                  </div>
+                  <button
+                    onClick={() => setSelectedCabinetId(null)}
+                    className="text-slate-400 hover:text-white text-xs px-1"
+                    title="Deselect"
+                  >
+                    ✕
+                  </button>
+                </div>
+
+                <div className="text-[10px] text-slate-400">
+                  {selectedCabinet.widthMm}mm × {selectedCabinet.heightMm}mm • {selectedCabinet.shutterMaterial || 'ACRYLIC'}
+                </div>
+
+                {/* Color swatches */}
+                <div>
+                  <div className="flex items-center justify-between text-[10px] text-slate-300 mb-1">
+                    <span>Component Color</span>
+                    <span className="font-mono text-amber-300 uppercase">
+                      {selectedCabinet.finishColor || '#475569'}
+                    </span>
+                  </div>
+                  <div className="grid grid-cols-6 gap-1 mb-2">
+                    {CABINET_COLOR_PALETTE.map((swatch) => {
+                      const isMatch =
+                        (selectedCabinet.finishColor || '#475569').toLowerCase() === swatch.hex.toLowerCase();
+                      return (
+                        <button
+                          key={swatch.hex}
+                          type="button"
+                          onClick={() => {
+                            if (onUpdateCabinet) {
+                              onUpdateCabinet({ ...selectedCabinet, finishColor: swatch.hex });
+                              setFinishStyle('CUSTOM');
+                            }
+                          }}
+                          className={`w-5 h-5 rounded border transition flex items-center justify-center ${
+                            isMatch
+                              ? 'border-amber-400 ring-2 ring-amber-500/50 scale-105'
+                              : 'border-slate-700 hover:border-slate-500'
+                          }`}
+                          style={{ backgroundColor: swatch.hex }}
+                          title={`${swatch.name} (${swatch.hex})`}
+                        >
+                          {isMatch && (
+                            <Check
+                              className={`w-2.5 h-2.5 ${
+                                isLightColor(swatch.hex) ? 'text-slate-900' : 'text-white'
+                              }`}
+                            />
+                          )}
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  {/* Native input */}
+                  <div className="flex items-center space-x-2">
+                    <input
+                      type="color"
+                      value={selectedCabinet.finishColor || '#475569'}
+                      onChange={(e) => {
+                        if (onUpdateCabinet) {
+                          onUpdateCabinet({ ...selectedCabinet, finishColor: e.target.value });
+                          setFinishStyle('CUSTOM');
+                        }
+                      }}
+                      className="w-5 h-5 rounded cursor-pointer border border-slate-700 bg-transparent"
+                    />
+                    <input
+                      type="text"
+                      value={selectedCabinet.finishColor || '#475569'}
+                      onChange={(e) => {
+                        if (onUpdateCabinet) {
+                          onUpdateCabinet({ ...selectedCabinet, finishColor: e.target.value });
+                          setFinishStyle('CUSTOM');
+                        }
+                      }}
+                      className="flex-1 bg-slate-900 border border-slate-700 rounded px-1.5 py-0.5 text-[10px] text-slate-100 font-mono"
+                    />
+                  </div>
+                </div>
+
+                {/* Batch apply to category */}
+                {onApplyColorToType && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      onApplyColorToType(
+                        selectedCabinet.cabinetType,
+                        selectedCabinet.finishColor || '#475569'
+                      );
+                      setFinishStyle('CUSTOM');
+                    }}
+                    className="w-full py-1 bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white rounded text-[10px] font-medium transition border border-slate-700"
+                  >
+                    Apply to all {selectedCabinet.cabinetType.includes('BASE') ? 'Base' : selectedCabinet.cabinetType === 'WALL' ? 'Wall' : 'Tall'} units
+                  </button>
+                )}
+              </div>
+            )}
 
             {/* Countertop & Backsplash Material */}
             <div>
@@ -540,6 +743,8 @@ export const RealisticVisualizer = ({ design, project, onBackTo3D }) => {
                 enableGlassShowcase={enableGlassShowcase}
                 cameraPreset={cameraPreset}
                 calibration={calibration}
+                selectedCabinetId={selectedCabinetId}
+                onSelectCabinet={(cab) => setSelectedCabinetId(cab ? cab.id : null)}
               />
 
               {/* Right Tag for After */}
@@ -589,7 +794,12 @@ export const RealisticVisualizer = ({ design, project, onBackTo3D }) => {
               </span>
               <span>•</span>
               <span>
-                Finish: <strong className="text-amber-300">{finishStyle.replace('_', ' ')}</strong>
+                Finish:{' '}
+                <strong className="text-amber-300">
+                  {finishStyle === 'CUSTOM'
+                    ? '3D Design Colors (Per-Component)'
+                    : finishStyle.replace('_', ' ')}
+                </strong>
               </span>
             </div>
           </div>

@@ -7,10 +7,12 @@ export const RealisticCabinet3D = ({
   cabinet,
   roomWidthMm,
   roomLengthMm,
-  finishStyle = 'SAGE_GLOSS', // 'SAGE_GLOSS' | 'ALABASTER' | 'CHARCOAL' | 'CUSTOM'
+  finishStyle = 'CUSTOM', // 'CUSTOM' (per-component 3D colors) | 'SAGE_GLOSS' | 'ALABASTER' | 'CHARCOAL'
   countertopStyle = 'TERRAZZO', // 'TERRAZZO' | 'WHITE_QUARTZ' | 'BLACK_GRANITE'
   includeAppliances = true,
-  enableGlassShowcase = false
+  enableGlassShowcase = false,
+  isSelected = false,
+  onSelectCabinet
 }) => {
   const { position, dimensions, rotationY } = to3DCoordinates(
     cabinet,
@@ -27,11 +29,21 @@ export const RealisticCabinet3D = ({
   const isWall = cabinet.cabinetType === 'WALL';
   const isTall = cabinet.cabinetType === 'TALL';
 
-  // Determine Shutter Color & Physical Material properties
+  // Determine Shutter Color:
+  // In 'CUSTOM' mode (default), reflect each component's individual 3D color (finishColor)
+  // Preserves multi-color schemes (e.g. contrasting base vs wall vs tall units)
   const shutterColor = useMemo(() => {
-    if (finishStyle === 'CUSTOM' && cabinet.finishColor) {
-      return cabinet.finishColor;
+    if (finishStyle === 'CUSTOM') {
+      return (
+        cabinet.finishColor ||
+        (cabinet.shutterMaterial === 'ACRYLIC'
+          ? '#f8fafc'
+          : cabinet.shutterMaterial === 'PU_LACQUER'
+          ? '#38bdf8'
+          : '#68846f')
+      );
     }
+    // Global architectural theme presets (when explicitly selected by user)
     switch (finishStyle) {
       case 'SAGE_GLOSS':
         return '#68846f'; // Architectural Sage Green from reference photo
@@ -40,9 +52,31 @@ export const RealisticCabinet3D = ({
       case 'CHARCOAL':
         return '#1e293b'; // Deep slate matte
       default:
-        return cabinet.finishColor || '#68846f';
+        return (
+          cabinet.finishColor ||
+          (cabinet.shutterMaterial === 'ACRYLIC'
+            ? '#f8fafc'
+            : cabinet.shutterMaterial === 'PU_LACQUER'
+            ? '#38bdf8'
+            : '#68846f')
+        );
     }
-  }, [finishStyle, cabinet.finishColor]);
+  }, [finishStyle, cabinet.finishColor, cabinet.shutterMaterial]);
+
+  // Physical PBR Material properties based on shutter finish & style
+  const physicalProps = useMemo(() => {
+    if (finishStyle === 'CHARCOAL') {
+      return { roughness: 0.45, metalness: 0.05, clearcoat: 0.0, clearcoatRoughness: 0.2 };
+    }
+    if (cabinet.shutterMaterial === 'LAMINATE') {
+      return { roughness: 0.5, metalness: 0.02, clearcoat: 0.0, clearcoatRoughness: 0.3 };
+    }
+    if (cabinet.shutterMaterial === 'PU_LACQUER') {
+      return { roughness: 0.22, metalness: 0.05, clearcoat: 0.45, clearcoatRoughness: 0.15 };
+    }
+    // High-gloss acrylic or architectural satin clearcoat
+    return { roughness: 0.12, metalness: 0.05, clearcoat: 0.75, clearcoatRoughness: 0.1 };
+  }, [finishStyle, cabinet.shutterMaterial]);
 
   // Resolve Countertop Texture & Material
   const countertopMap = useMemo(() => {
@@ -66,14 +100,52 @@ export const RealisticCabinet3D = ({
       widthM >= 0.85);
 
   // Check if this unit is a glass crockery showcase
+  // Only applies when explicitly noted or designated as glass, preserving 3D colors on standard cabinets
   const isGlassDisplay =
     enableGlassShowcase &&
     (isTall || isWall) &&
     !isRefrigerator &&
-    (cabinet.notes?.toLowerCase().includes('glass') || cabinet.id % 2 === 0);
+    (cabinet.notes?.toLowerCase().includes('glass') || cabinet.shutterMaterial === 'GLASS');
 
   return (
-    <group position={position} rotation={[0, rotationY, 0]}>
+    <group
+      position={position}
+      rotation={[0, rotationY, 0]}
+      onClick={(e) => {
+        e.stopPropagation();
+        onSelectCabinet && onSelectCabinet(cabinet);
+      }}
+      onPointerOver={(e) => {
+        e.stopPropagation();
+        document.body.style.cursor = 'pointer';
+      }}
+      onPointerOut={() => {
+        document.body.style.cursor = 'auto';
+      }}
+    >
+      {/* Interactive Selection Highlight */}
+      {isSelected && (
+        <mesh
+          position={[
+            0,
+            isBase ? plinthHeight / 2 - countertopThickness / 2 : isTall ? plinthHeight / 2 : 0,
+            0
+          ]}
+        >
+          <boxGeometry
+            args={[
+              widthM + 0.02,
+              isBase
+                ? heightM - plinthHeight - countertopThickness + 0.02
+                : isTall
+                ? heightM - plinthHeight + 0.02
+                : heightM + 0.02,
+              depthM + 0.02
+            ]}
+          />
+          <meshBasicMaterial color="#f59e0b" wireframe />
+        </mesh>
+      )}
       {/* ============================================================ */}
       {/* 1. BASE UNITS (Standard, Drawers, Sink, Cooktop)             */}
       {/* ============================================================ */}
@@ -96,10 +168,10 @@ export const RealisticCabinet3D = ({
             />
             <meshPhysicalMaterial
               color={shutterColor}
-              roughness={finishStyle === 'CHARCOAL' ? 0.45 : 0.12}
-              metalness={0.05}
-              clearcoat={finishStyle === 'CHARCOAL' ? 0.0 : 0.75}
-              clearcoatRoughness={0.1}
+              roughness={physicalProps.roughness}
+              metalness={physicalProps.metalness}
+              clearcoat={physicalProps.clearcoat}
+              clearcoatRoughness={physicalProps.clearcoatRoughness}
             />
           </mesh>
 
@@ -232,10 +304,10 @@ export const RealisticCabinet3D = ({
             <boxGeometry args={[widthM - 0.004, heightM, depthM]} />
             <meshPhysicalMaterial
               color={shutterColor}
-              roughness={finishStyle === 'CHARCOAL' ? 0.45 : 0.12}
-              metalness={0.05}
-              clearcoat={finishStyle === 'CHARCOAL' ? 0.0 : 0.75}
-              clearcoatRoughness={0.1}
+              roughness={physicalProps.roughness}
+              metalness={physicalProps.metalness}
+              clearcoat={physicalProps.clearcoat}
+              clearcoatRoughness={physicalProps.clearcoatRoughness}
             />
           </mesh>
 
@@ -368,8 +440,10 @@ export const RealisticCabinet3D = ({
                 <boxGeometry args={[widthM, 0.7, depthM]} />
                 <meshPhysicalMaterial
                   color={shutterColor}
-                  roughness={0.12}
-                  clearcoat={0.7}
+                  roughness={physicalProps.roughness}
+                  metalness={physicalProps.metalness}
+                  clearcoat={physicalProps.clearcoat}
+                  clearcoatRoughness={physicalProps.clearcoatRoughness}
                 />
               </mesh>
 
@@ -428,10 +502,10 @@ export const RealisticCabinet3D = ({
                 <boxGeometry args={[widthM - 0.004, heightM - plinthHeight, depthM]} />
                 <meshPhysicalMaterial
                   color={shutterColor}
-                  roughness={finishStyle === 'CHARCOAL' ? 0.45 : 0.12}
-                  metalness={0.05}
-                  clearcoat={finishStyle === 'CHARCOAL' ? 0.0 : 0.75}
-                  clearcoatRoughness={0.1}
+                  roughness={physicalProps.roughness}
+                  metalness={physicalProps.metalness}
+                  clearcoat={physicalProps.clearcoat}
+                  clearcoatRoughness={physicalProps.clearcoatRoughness}
                 />
               </mesh>
 

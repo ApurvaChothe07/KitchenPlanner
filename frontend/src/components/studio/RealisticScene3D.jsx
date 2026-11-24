@@ -8,13 +8,15 @@ import { getFloorTileTexture, getTerrazzoTexture, getMarbleTexture, getGraniteTe
 export const RealisticScene3D = forwardRef(({
   design,
   environmentMode = 'ROOM_PHOTO', // 'ROOM_PHOTO' | 'ARCHITECTURAL_STUDIO'
-  finishStyle = 'SAGE_GLOSS',
+  finishStyle = 'CUSTOM',
   countertopStyle = 'TERRAZZO',
   lightingPreset = 'WARM_EVENING',
   includeAppliances = true,
   enableGlassShowcase = false,
   cameraPreset = 'FRONT', // 'FRONT' | 'CORRIDOR' | 'SHOWCASE' | 'ISO'
   calibration = { scale: 1, offsetX: 0, offsetY: 0, offsetZ: 0, rotationY: 0 },
+  selectedCabinetId = null,
+  onSelectCabinet,
   onCameraChange
 }, ref) => {
   const controlsRef = useRef(null);
@@ -112,6 +114,7 @@ export const RealisticScene3D = forwardRef(({
         preserveDrawingBuffer: true, // Required for capturing HD screenshots
         powerPreference: 'high-performance'
       }}
+      onPointerMissed={() => onSelectCabinet && onSelectCabinet(null)}
       className="w-full h-full"
     >
       {/* ============================================================ */}
@@ -184,6 +187,8 @@ export const RealisticScene3D = forwardRef(({
             countertopStyle={countertopStyle}
             includeAppliances={includeAppliances}
             enableGlassShowcase={enableGlassShowcase}
+            isSelected={selectedCabinetId === cabinet.id}
+            onSelectCabinet={onSelectCabinet}
           />
         ))}
 

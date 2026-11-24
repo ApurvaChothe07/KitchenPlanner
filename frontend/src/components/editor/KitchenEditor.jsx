@@ -401,6 +401,8 @@ export const KitchenEditor = ({
               design={design}
               project={project}
               onBackTo3D={() => setViewMode('3D')}
+              onUpdateCabinet={handleUpdateCabinet}
+              onApplyColorToType={handleApplyColorToType}
             />
           )}
         </div>
