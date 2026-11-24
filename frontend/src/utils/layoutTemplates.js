@@ -668,3 +668,302 @@ export const generateLayoutCabinets = (layoutType, roomWidthMm, roomLengthMm, ro
 
   return cabinets;
 };
+
+/**
+ * Auto-Arrange ALL existing and user-added cabinets into the active architectural layout shape.
+ * Preserves each cabinet's unique ID, dimensions, finishColor, materials, and notes,
+ * and automatically repositions them along active walls with ergonomic workflow spacing.
+ */
+export const autoArrangeExistingCabinets = (
+  cabinets,
+  layoutType = 'L_SHAPED',
+  roomWidthMm = 4500,
+  roomLengthMm = 3600,
+  roomHeightMm = 2800
+) => {
+  if (!cabinets || cabinets.length === 0) return [];
+
+  // Group cabinets by category
+  const tallUnits = [];
+  const sinkUnits = [];
+  const hobUnits = [];
+  const drawerUnits = [];
+  const baseUnits = [];
+  const wallUnits = [];
+  const otherUnits = [];
+
+  cabinets.forEach((cab) => {
+    const type = (cab.cabinetType || 'BASE').toUpperCase();
+    if (type === 'TALL') {
+      tallUnits.push(cab);
+    } else if (type === 'WALL') {
+      wallUnits.push(cab);
+    } else if (type === 'SINK_BASE') {
+      sinkUnits.push(cab);
+    } else if (type === 'HOB_BASE') {
+      hobUnits.push(cab);
+    } else if (type === 'DRAWER_BASE') {
+      drawerUnits.push(cab);
+    } else if (type.includes('BASE')) {
+      baseUnits.push(cab);
+    } else {
+      otherUnits.push(cab);
+    }
+  });
+
+  const wallElevZ = Math.min(1450, Math.max(1200, roomHeightMm - 1350));
+  const arranged = [];
+
+  const placeCab = (cab, posX, posY, posZ = 0, rotation = 0) => {
+    const maxX = Math.max(0, roomWidthMm - cab.widthMm);
+    const maxY = Math.max(0, roomLengthMm - cab.depthMm);
+    arranged.push({
+      ...cab,
+      posX: Math.max(0, Math.min(Math.round(posX / 50) * 50, maxX)),
+      posY: Math.max(0, Math.min(Math.round(posY / 50) * 50, maxY)),
+      posZ: Math.round(posZ / 50) * 50,
+      rotation: rotation
+    });
+  };
+
+  // Combine floor units in ergonomic sequence:
+  // Storage/Tall -> Sink/Wet prep -> Workspace/Prep -> Cooktop/Hob -> Drawers -> Misc
+  const floorUnits = [
+    ...tallUnits,
+    ...sinkUnits,
+    ...baseUnits,
+    ...drawerUnits,
+    ...hobUnits,
+    ...otherUnits
+  ];
+
+  switch (layoutType) {
+    case 'STRAIGHT': {
+      // Linear run along Top/Back wall (posY = 0)
+      let curX = 0;
+      floorUnits.forEach((cab) => {
+        if (curX + cab.widthMm > roomWidthMm && curX > 0) {
+          // Wrap to front/secondary offset run if room width exceeded
+          placeCab(
+            cab,
+            Math.max(0, curX - roomWidthMm),
+            Math.min(roomLengthMm - cab.depthMm, 1200),
+            0,
+            0
+          );
+        } else {
+          placeCab(cab, curX, 0, 0, 0);
+          curX += cab.widthMm;
+        }
+      });
+
+      // Overhead wall units along Top wall
+      let wallX = 0;
+      wallUnits.forEach((cab) => {
+        placeCab(cab, wallX, 0, wallElevZ, 0);
+        wallX += cab.widthMm;
+      });
+      break;
+    }
+
+    case 'L_SHAPED': {
+      // Corner junction at (0, 0)
+      // Run 1: Left wall along Y (posX = 0)
+      // Run 2: Top wall along X (posY = 0)
+      const leftUnits = [];
+      const topUnits = [];
+
+      floorUnits.forEach((cab, idx) => {
+        if (cab.cabinetType === 'SINK_BASE' || idx % 2 === 0) {
+          leftUnits.push(cab);
+        } else {
+          topUnits.push(cab);
+        }
+      });
+
+      // Left Run along X = 0 (moving down Y)
+      let curY = 0;
+      leftUnits.forEach((cab) => {
+        placeCab(cab, 0, curY, 0, 0);
+        curY += cab.depthMm || cab.widthMm || 600;
+      });
+
+      // Top Run along Y = 0 (moving right along X, starting after left corner 600mm)
+      let curX = 600;
+      topUnits.forEach((cab) => {
+        placeCab(cab, curX, 0, 0, 0);
+        curX += cab.widthMm;
+      });
+
+      // Wall units: alternating between Top wall and Left wall
+      let wallX = 600;
+      let wallY = 600;
+      wallUnits.forEach((cab, idx) => {
+        if (idx % 2 === 0) {
+          placeCab(cab, wallX, 0, wallElevZ, 0);
+          wallX += cab.widthMm;
+        } else {
+          placeCab(cab, 0, wallY, wallElevZ, 0);
+          wallY += cab.depthMm || cab.widthMm || 600;
+        }
+      });
+      break;
+    }
+
+    case 'U_SHAPED': {
+      const rightX = Math.max(1200, roomWidthMm - 600);
+      const runs = [[], [], []]; // 0: Left, 1: Top (Back), 2: Right
+
+      floorUnits.forEach((cab, idx) => {
+        if (cab.cabinetType === 'SINK_BASE') {
+          runs[1].push(cab); // Center / Back wall
+        } else if (cab.cabinetType === 'HOB_BASE') {
+          runs[2].push(cab); // Right wall
+        } else {
+          runs[idx % 3].push(cab);
+        }
+      });
+
+      // Left Run (X = 0, moving down Y)
+      let leftY = 0;
+      runs[0].forEach((cab) => {
+        placeCab(cab, 0, leftY, 0, 0);
+        leftY += cab.depthMm || 600;
+      });
+
+      // Top Run (Y = 0, moving right along X starting after left corner 600)
+      let topX = 600;
+      runs[1].forEach((cab) => {
+        placeCab(cab, topX, 0, 0, 0);
+        topX += cab.widthMm;
+      });
+
+      // Right Run (X = rightX, moving down Y)
+      let rightY = 0;
+      runs[2].forEach((cab) => {
+        placeCab(cab, rightX, rightY, 0, 0);
+        rightY += cab.depthMm || 600;
+      });
+
+      // Distribute wall units across the 3 walls
+      let wLeftY = 600;
+      let wTopX = 600;
+      let wRightY = 600;
+      wallUnits.forEach((cab, idx) => {
+        const targetRun = idx % 3;
+        if (targetRun === 0) {
+          placeCab(cab, 0, wLeftY, wallElevZ, 0);
+          wLeftY += cab.depthMm || 600;
+        } else if (targetRun === 1) {
+          placeCab(cab, wTopX, 0, wallElevZ, 0);
+          wTopX += cab.widthMm;
+        } else {
+          placeCab(cab, rightX, wRightY, wallElevZ, 0);
+          wRightY += cab.depthMm || 600;
+        }
+      });
+      break;
+    }
+
+    case 'PARALLEL': {
+      const rightX = Math.max(1200, roomWidthMm - 600);
+      const leftRun = [];
+      const rightRun = [];
+
+      floorUnits.forEach((cab, idx) => {
+        if (cab.cabinetType === 'SINK_BASE') {
+          leftRun.push(cab);
+        } else if (cab.cabinetType === 'HOB_BASE' || cab.cabinetType === 'TALL') {
+          rightRun.push(cab);
+        } else if (idx % 2 === 0) {
+          leftRun.push(cab);
+        } else {
+          rightRun.push(cab);
+        }
+      });
+
+      let leftY = 100;
+      leftRun.forEach((cab) => {
+        placeCab(cab, 0, leftY, 0, 0);
+        leftY += cab.depthMm || 600;
+      });
+
+      let rightY = 100;
+      rightRun.forEach((cab) => {
+        placeCab(cab, rightX, rightY, 0, 0);
+        rightY += cab.depthMm || 600;
+      });
+
+      // Wall units along left and right runs
+      let wLeftY = 100;
+      let wRightY = 100;
+      wallUnits.forEach((cab, idx) => {
+        if (idx % 2 === 0) {
+          placeCab(cab, 0, wLeftY, wallElevZ, 0);
+          wLeftY += cab.depthMm || 600;
+        } else {
+          placeCab(cab, rightX, wRightY, wallElevZ, 0);
+          wRightY += cab.depthMm || 600;
+        }
+      });
+      break;
+    }
+
+    case 'ISLAND': {
+      const perimeterUnits = [];
+      const islandUnits = [];
+
+      floorUnits.forEach((cab, idx) => {
+        if (cab.cabinetType === 'HOB_BASE' || cab.cabinetType === 'DRAWER_BASE') {
+          islandUnits.push(cab);
+        } else if (islandUnits.length < 2 && idx % 3 === 2) {
+          islandUnits.push(cab);
+        } else {
+          perimeterUnits.push(cab);
+        }
+      });
+
+      // Perimeter Run along Top Wall (Y = 0)
+      let perimX = 100;
+      perimeterUnits.forEach((cab) => {
+        placeCab(cab, perimX, 0, 0, 0);
+        perimX += cab.widthMm;
+      });
+
+      // Overhead wall units on perimeter
+      let wallX = 100;
+      wallUnits.forEach((cab) => {
+        placeCab(cab, wallX, 0, wallElevZ, 0);
+        wallX += cab.widthMm;
+      });
+
+      // Center Island (Freestanding in center of room)
+      const islandTotalWidth =
+        islandUnits.reduce((acc, c) => acc + c.widthMm, 0) || 1200;
+      let islandCurX = Math.max(200, Math.round((roomWidthMm - islandTotalWidth) / 2));
+      const islandY = Math.max(1000, Math.round(roomLengthMm * 0.45));
+
+      islandUnits.forEach((cab) => {
+        placeCab(cab, islandCurX, islandY, 0, 0);
+        islandCurX += cab.widthMm;
+      });
+      break;
+    }
+
+    default: {
+      let curX = 0;
+      floorUnits.forEach((cab) => {
+        placeCab(cab, curX, 0, 0, 0);
+        curX += cab.widthMm;
+      });
+      let wallX = 0;
+      wallUnits.forEach((cab) => {
+        placeCab(cab, wallX, 0, wallElevZ, 0);
+        wallX += cab.widthMm;
+      });
+      break;
+    }
+  }
+
+  return arranged;
+};

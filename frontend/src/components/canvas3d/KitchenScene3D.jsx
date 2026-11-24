@@ -17,7 +17,8 @@ import {
   ArrowDown,
   X,
   Palette,
-  Check
+  Check,
+  Wand2
 } from 'lucide-react';
 import { CABINET_COLOR_PALETTE, isLightColor } from '../../utils/coordinates';
 
@@ -70,6 +71,7 @@ export const KitchenScene3D = ({
   onUpdateCabinet,
   onDeleteCabinet,
   onDuplicateCabinet,
+  onAutoArrange,
   onFallbackTo2D
 }) => {
   const controlsRef = useRef(null);
@@ -248,6 +250,20 @@ export const KitchenScene3D = ({
           <Eye className="w-3.5 h-3.5 text-amber-400" />
           <span>Eye-Level</span>
         </button>
+
+        {onAutoArrange && (
+          <>
+            <div className="h-4 w-px bg-slate-700 mx-0.5" />
+            <button
+              onClick={onAutoArrange}
+              className="px-2.5 py-1 text-xs bg-brand-600 hover:bg-brand-500 text-white rounded-lg transition font-medium flex items-center space-x-1 shadow-sm"
+              title={`Auto-arrange all components into ${layoutType.replace('_', ' ')} layout`}
+            >
+              <Wand2 className="w-3.5 h-3.5 text-amber-300" />
+              <span>Auto-Arrange</span>
+            </button>
+          </>
+        )}
       </div>
 
       {/* Floating 3D Selected Object Tool Strip (Top-Center) */}

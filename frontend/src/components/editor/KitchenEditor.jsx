@@ -10,7 +10,7 @@ import { ComparisonModal } from '../estimate/ComparisonModal';
 import { QuotationsModal } from '../quotation/QuotationsModal';
 import { designService } from '../../services/designService';
 import { clampWithinRoom, isCabinetColliding } from '../../utils/coordinates';
-import { generateLayoutCabinets } from '../../utils/layoutTemplates';
+import { generateLayoutCabinets, autoArrangeExistingCabinets } from '../../utils/layoutTemplates';
 import { RealisticVisualizer } from '../studio/RealisticVisualizer';
 import { AlertCircle } from 'lucide-react';
 
@@ -117,19 +117,28 @@ export const KitchenEditor = ({
     setIsDirty(true);
   };
 
-  // Auto-Arrange Cabinets into selected Layout Shape
+  // Auto-Arrange ALL Cabinets (including newly added components) into selected Layout Shape
   const handleAutoArrange = () => {
-    const hasCabinets = design.cabinets.length > 0;
-    if (
-      hasCabinets &&
-      !window.confirm(
-        `Auto-arrange cabinets into a ${design.layoutType.replace('_', ' ')} layout? This will place modular base, sink, hob, and wall units along the active walls.`
-      )
-    ) {
+    // If canvas is completely empty, generate starter cabinets for selected shape
+    if (!design.cabinets || design.cabinets.length === 0) {
+      const arranged = generateLayoutCabinets(
+        design.layoutType,
+        design.roomWidthMm,
+        design.roomLengthMm,
+        design.roomHeightMm
+      );
+      setDesign((prev) => ({
+        ...prev,
+        cabinets: arranged
+      }));
+      setSelectedCabinetId(null);
+      setIsDirty(true);
       return;
     }
 
-    const arranged = generateLayoutCabinets(
+    // Seamlessly arrange all existing and added components along active walls
+    const arranged = autoArrangeExistingCabinets(
+      design.cabinets,
       design.layoutType,
       design.roomWidthMm,
       design.roomLengthMm,
@@ -394,6 +403,7 @@ export const KitchenEditor = ({
               onUpdateCabinet={handleUpdateCabinet}
               onDeleteCabinet={handleDeleteCabinet}
               onDuplicateCabinet={handleDuplicateCabinet}
+              onAutoArrange={handleAutoArrange}
               onFallbackTo2D={() => setViewMode('2D')}
             />
           ) : (

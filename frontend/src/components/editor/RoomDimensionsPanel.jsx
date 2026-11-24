@@ -30,7 +30,7 @@ export const RoomDimensionsPanel = ({
             <button
               onClick={onAutoArrangeLayout}
               className="px-2.5 py-1 text-xs bg-brand-600 hover:bg-brand-500 text-white rounded-lg transition font-medium flex items-center space-x-1.5 shadow-sm"
-              title={`Auto-arrange modular units for ${currentConfig.name}`}
+              title={`Auto-arrange all placed and added components into ${currentConfig.name}`}
             >
               <Wand2 className="w-3.5 h-3.5 text-amber-300" />
               <span>Auto-Arrange {currentConfig.name.split(' ')[0]}</span>

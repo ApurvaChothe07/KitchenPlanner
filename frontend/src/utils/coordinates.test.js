@@ -11,6 +11,7 @@ import {
   from3DRotation,
   PREDEFINED_CABINETS
 } from './coordinates.js';
+import { autoArrangeExistingCabinets } from './layoutTemplates.js';
 
 console.log('Running 2D Kitchen Editor Coordinates & Physics Verification...');
 
@@ -139,5 +140,37 @@ assert.strictEqual(from3DRotation(-Math.PI / 2), 90);
 assert.strictEqual(from3DRotation(-Math.PI), 180);
 assert.strictEqual(from3DRotation(-Math.PI * 1.5), 270);
 console.log('✓ 3D to 2D inverse coordinate, snapping, and rotation transform verified');
+
+// 8. Auto-Arrange for User-Added Components
+const userAddedCabinets = [
+  { id: 101, cabinetType: 'SINK_BASE', widthMm: 800, depthMm: 600, heightMm: 860, finishColor: '#1e3a8a', posX: 100, posY: 100 },
+  { id: 102, cabinetType: 'HOB_BASE', widthMm: 900, depthMm: 600, heightMm: 860, finishColor: '#f97316', posX: 100, posY: 100 },
+  { id: 103, cabinetType: 'DRAWER_BASE', widthMm: 600, depthMm: 600, heightMm: 860, finishColor: '#475569', posX: 100, posY: 100 },
+  { id: 104, cabinetType: 'TALL', widthMm: 600, depthMm: 600, heightMm: 2100, finishColor: '#0f172a', posX: 100, posY: 100 },
+  { id: 105, cabinetType: 'WALL', widthMm: 600, depthMm: 350, heightMm: 720, finishColor: '#f8fafc', posX: 100, posY: 100 },
+  { id: 106, cabinetType: 'BASE', widthMm: 600, depthMm: 600, heightMm: 860, finishColor: '#38bdf8', posX: 100, posY: 100 }
+];
+
+['STRAIGHT', 'L_SHAPED', 'U_SHAPED', 'PARALLEL', 'ISLAND'].forEach((layout) => {
+  const arranged = autoArrangeExistingCabinets(userAddedCabinets, layout, 4500, 3600, 2800);
+  assert.strictEqual(arranged.length, userAddedCabinets.length, `All ${userAddedCabinets.length} cabinets must be preserved in ${layout}`);
+
+  // Verify IDs and custom finish colors are strictly preserved
+  arranged.forEach((cab) => {
+    const original = userAddedCabinets.find((u) => u.id === cab.id);
+    assert.ok(original, `Original cabinet ${cab.id} must exist in arranged output`);
+    assert.strictEqual(cab.finishColor, original.finishColor, `Custom color on cab ${cab.id} must be preserved`);
+    // Verify within room boundaries
+    assert.ok(cab.posX >= 0 && cab.posX <= 4500 - cab.widthMm, `Cabinet ${cab.id} posX (${cab.posX}) must be within room`);
+    assert.ok(cab.posY >= 0 && cab.posY <= 3600 - cab.depthMm, `Cabinet ${cab.id} posY (${cab.posY}) must be within room`);
+    // Verify wall elevation
+    if (cab.cabinetType === 'WALL') {
+      assert.ok(cab.posZ >= 1200, `Wall cabinet ${cab.id} posZ (${cab.posZ}) must be at overhead elevation`);
+    } else {
+      assert.strictEqual(cab.posZ, 0, `Floor cabinet ${cab.id} posZ must be 0`);
+    }
+  });
+});
+console.log('✓ Auto-arrange for dynamically added components across all 5 layout shapes verified');
 
 console.log('\nALL 2D AND 3D COORDINATE TESTS PASSED SUCCESSFULLY!');
