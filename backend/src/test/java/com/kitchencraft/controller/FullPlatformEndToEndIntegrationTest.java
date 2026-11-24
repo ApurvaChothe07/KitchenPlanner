@@ -8,6 +8,7 @@ import com.kitchencraft.entity.Material;
 import com.kitchencraft.entity.MaterialCategory;
 import com.kitchencraft.entity.MaterialUnit;
 import com.kitchencraft.repository.*;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -61,12 +62,7 @@ public class FullPlatformEndToEndIntegrationTest {
 
     @BeforeEach
     void setUp() {
-        quotationRepository.deleteAll();
-        cabinetRepository.deleteAll();
-        designRepository.deleteAll();
-        projectRepository.deleteAll();
-        materialRepository.deleteAll();
-        userRepository.deleteAll();
+        cleanDatabase();
 
         // Seed materials for cost estimation
         Material carcass = materialRepository.save(Material.builder()
@@ -348,5 +344,19 @@ public class FullPlatformEndToEndIntegrationTest {
         mockMvc.perform(get("/api/v1/quotations/" + quotationId + "/pdf")
                         .header("Authorization", userBToken))
                 .andExpect(status().isForbidden());
+    }
+
+    @AfterEach
+    void tearDown() {
+        cleanDatabase();
+    }
+
+    private void cleanDatabase() {
+        quotationRepository.deleteAll();
+        cabinetRepository.deleteAll();
+        designRepository.deleteAll();
+        projectRepository.deleteAll();
+        materialRepository.deleteAll();
+        userRepository.deleteAll();
     }
 }

@@ -191,7 +191,7 @@ public class DataInitializer implements CommandLineRunner {
                     user.setPasswordHash(passwordEncoder.encode(password));
                     user.setActive(true);
                     userRepository.save(user);
-                    log.info("Synchronized login password for {} ({})", email, password);
+                    log.info("Synchronized credentials for existing user [{}]", email);
                 },
                 () -> {
                     userRepository.save(User.builder()
@@ -201,7 +201,7 @@ public class DataInitializer implements CommandLineRunner {
                             .role(Role.ROLE_USER)
                             .active(true)
                             .build());
-                    log.info("Created user account for {} with password: {}", email, password);
+                    log.info("Created user account for [{}]", email);
                 }
         );
     }

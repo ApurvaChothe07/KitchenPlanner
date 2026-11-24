@@ -17,6 +17,7 @@ import com.kitchencraft.repository.ProjectRepository;
 import com.kitchencraft.repository.QuotationRepository;
 import com.kitchencraft.repository.UserRepository;
 import com.kitchencraft.security.JwtService;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -82,11 +83,7 @@ class QuotationIntegrationTest {
 
     @BeforeEach
     void setUp() throws Exception {
-        quotationRepository.deleteAll();
-        cabinetRepository.deleteAll();
-        designRepository.deleteAll();
-        projectRepository.deleteAll();
-        userRepository.deleteAll();
+        cleanDatabase();
 
         // 1. Owner Setup
         owner = User.builder()
@@ -320,5 +317,18 @@ class QuotationIntegrationTest {
                 .andReturn();
 
         assertThat(pdfResult.getResponse().getContentAsByteArray()).isNotEmpty();
+    }
+
+    @AfterEach
+    void tearDown() {
+        cleanDatabase();
+    }
+
+    private void cleanDatabase() {
+        quotationRepository.deleteAll();
+        cabinetRepository.deleteAll();
+        designRepository.deleteAll();
+        projectRepository.deleteAll();
+        userRepository.deleteAll();
     }
 }

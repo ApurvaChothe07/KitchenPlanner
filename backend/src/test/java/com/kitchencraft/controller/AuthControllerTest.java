@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.kitchencraft.dto.request.LoginRequest;
 import com.kitchencraft.dto.request.RegisterRequest;
 import com.kitchencraft.repository.UserRepository;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -36,6 +37,11 @@ class AuthControllerTest {
 
     @BeforeEach
     void cleanUp() {
+        userRepository.deleteAll();
+    }
+
+    @AfterEach
+    void tearDown() {
         userRepository.deleteAll();
     }
 

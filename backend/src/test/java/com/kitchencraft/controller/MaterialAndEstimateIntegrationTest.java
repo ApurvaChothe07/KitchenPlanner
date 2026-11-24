@@ -5,6 +5,7 @@ import com.kitchencraft.dto.request.*;
 import com.kitchencraft.entity.*;
 import com.kitchencraft.repository.*;
 import com.kitchencraft.security.JwtService;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -69,12 +70,7 @@ class MaterialAndEstimateIntegrationTest {
 
     @BeforeEach
     void setUp() throws Exception {
-        quotationRepository.deleteAll();
-        cabinetRepository.deleteAll();
-        designRepository.deleteAll();
-        projectRepository.deleteAll();
-        materialRepository.deleteAll();
-        userRepository.deleteAll();
+        cleanDatabase();
 
         // 1. Users
         owner = User.builder()
@@ -336,5 +332,19 @@ class MaterialAndEstimateIntegrationTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{}"))
                 .andExpect(status().isUnauthorized());
+    }
+
+    @AfterEach
+    void tearDown() {
+        cleanDatabase();
+    }
+
+    private void cleanDatabase() {
+        quotationRepository.deleteAll();
+        cabinetRepository.deleteAll();
+        designRepository.deleteAll();
+        projectRepository.deleteAll();
+        materialRepository.deleteAll();
+        userRepository.deleteAll();
     }
 }
