@@ -40,11 +40,12 @@ export const RealisticVisualizer = ({
   const [uploadedSitePhoto, setUploadedSitePhoto] = useState(null);
   const [sitePhotoName, setSitePhotoName] = useState('');
 
-  // Studio Display Mode
-  const [environmentMode, setEnvironmentMode] = useState('ROOM_PHOTO'); // 'ROOM_PHOTO' | 'ARCHITECTURAL_STUDIO'
-  const [viewMode, setViewMode] = useState('split'); // 'split' | 'full'
+  // Studio Display Mode: defaults to full 3D Architectural Room
+  const [environmentMode, setEnvironmentMode] = useState('ARCHITECTURAL_STUDIO'); // 'ARCHITECTURAL_STUDIO' | 'ROOM_PHOTO'
+  const [viewMode, setViewMode] = useState('full'); // 'full' (complete installed view by default) | 'split'
   const [sliderPosition, setSliderPosition] = useState(50); // 0 to 100%
   const [cameraPreset, setCameraPreset] = useState('FRONT'); // 'FRONT' | 'CORRIDOR' | 'SHOWCASE' | 'ISO'
+  const [isDraggingSlider, setIsDraggingSlider] = useState(false);
 
   // Architectural Finish Controls
   // Default to 'CUSTOM' to automatically reflect individual component colors chosen in 3D scene
@@ -107,15 +108,35 @@ export const RealisticVisualizer = ({
     }
   };
 
-  // Draggable Before/After Split Slider
-  const handleSliderMove = (e) => {
-    if (!containerRef.current) return;
+  // Draggable Before/After Split Slider with smooth pointer capture
+  const handlePointerDown = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDraggingSlider(true);
+    try {
+      e.currentTarget.setPointerCapture(e.pointerId);
+    } catch (err) {}
+  };
+
+  const handlePointerMove = (e) => {
+    if (!isDraggingSlider || !containerRef.current) return;
+    e.preventDefault();
+    e.stopPropagation();
     const rect = containerRef.current.getBoundingClientRect();
     const clientX = e.clientX ?? (e.touches && e.touches[0]?.clientX);
     if (clientX === undefined) return;
     const x = Math.max(0, Math.min(clientX - rect.left, rect.width));
     const percent = Math.round((x / rect.width) * 100);
     setSliderPosition(percent);
+  };
+
+  const handlePointerUp = (e) => {
+    if (isDraggingSlider) {
+      setIsDraggingSlider(false);
+      try {
+        e.currentTarget.releasePointerCapture(e.pointerId);
+      } catch (err) {}
+    }
   };
 
   // Snapshot Export
@@ -197,28 +218,31 @@ export const RealisticVisualizer = ({
           </div>
 
           {/* Split Mode Switcher (available in Room Photo mode) */}
-          {environmentMode === 'ROOM_PHOTO' && (
-            <div className="flex items-center bg-slate-800 p-0.5 rounded-lg border border-slate-700">
-              <button
-                onClick={() => setViewMode('split')}
-                className={`px-2.5 py-1 text-xs font-medium rounded-md transition ${
-                  viewMode === 'split' ? 'bg-amber-600 text-white shadow' : 'text-slate-400 hover:text-slate-200'
-                }`}
-                title="Split Before / After slider"
-              >
-                Before / After Split
-              </button>
-              <button
-                onClick={() => setViewMode('full')}
-                className={`px-2.5 py-1 text-xs font-medium rounded-md transition ${
-                  viewMode === 'full' ? 'bg-amber-600 text-white shadow' : 'text-slate-400 hover:text-slate-200'
-                }`}
-                title="Full 100% composite"
-              >
-                Installed View
-              </button>
-            </div>
-          )}
+          <div className="flex items-center bg-slate-800 p-0.5 rounded-lg border border-slate-700">
+            <button
+              onClick={() => setViewMode('full')}
+              className={`px-2.5 py-1 text-xs font-medium rounded-md transition ${
+                viewMode === 'full' ? 'bg-amber-600 text-white shadow' : 'text-slate-400 hover:text-slate-200'
+              }`}
+              title="Full 100% installed kitchen view"
+            >
+              Installed View
+            </button>
+            <button
+              onClick={() => {
+                setViewMode('split');
+                if (environmentMode !== 'ROOM_PHOTO') {
+                  setEnvironmentMode('ROOM_PHOTO');
+                }
+              }}
+              className={`px-2.5 py-1 text-xs font-medium rounded-md transition ${
+                viewMode === 'split' ? 'bg-amber-600 text-white shadow' : 'text-slate-400 hover:text-slate-200'
+              }`}
+              title="Split Before / After slider"
+            >
+              Before / After Split
+            </button>
+          </div>
 
           {/* Export Snapshot */}
           <button
@@ -688,11 +712,6 @@ export const RealisticVisualizer = ({
           {/* VIEWPORT AREA */}
           <div
             ref={containerRef}
-            onMouseMove={(e) => {
-              if (viewMode === 'split' && environmentMode === 'ROOM_PHOTO' && e.buttons === 1) {
-                handleSliderMove(e);
-              }
-            }}
             className="flex-1 relative w-full h-full overflow-hidden"
           >
             {/* UNDERLYING LAYER: Raw Site Photo (visible in Before/After split) */}
@@ -703,12 +722,6 @@ export const RealisticVisualizer = ({
                   alt="Raw Site Photo"
                   className="w-full h-full object-cover"
                 />
-                {/* Left Tag for Before */}
-                {viewMode === 'split' && (
-                  <div className="absolute top-4 left-4 bg-slate-900/85 backdrop-blur border border-slate-700 px-2.5 py-1 rounded-lg text-xs font-semibold text-slate-200 z-10 pointer-events-none mt-10">
-                    📷 Before: Raw Room Photo
-                  </div>
-                )}
               </div>
             )}
 
@@ -745,33 +758,25 @@ export const RealisticVisualizer = ({
                 calibration={calibration}
                 selectedCabinetId={selectedCabinetId}
                 onSelectCabinet={(cab) => setSelectedCabinetId(cab ? cab.id : null)}
+                isOrbitEnabled={!isDraggingSlider}
               />
-
-              {/* Right Tag for After */}
-              {environmentMode === 'ROOM_PHOTO' && viewMode === 'split' && (
-                <div className="absolute top-4 right-4 bg-emerald-950/85 backdrop-blur border border-emerald-500/50 px-2.5 py-1 rounded-lg text-xs font-semibold text-emerald-300 pointer-events-none">
-                  ✨ Installed: Real-Time 3D Kitchen ({stats.total} units)
-                </div>
-              )}
             </div>
 
             {/* INTERACTIVE SPLIT SLIDER DIVIDER */}
             {environmentMode === 'ROOM_PHOTO' && viewMode === 'split' && (
               <div
-                className="absolute top-0 bottom-0 w-1 bg-white shadow-[0_0_12px_rgba(255,255,255,0.9)] cursor-ew-resize z-20"
+                className="absolute top-0 bottom-0 w-1 bg-white shadow-[0_0_16px_rgba(255,255,255,0.95)] cursor-ew-resize z-20 touch-none select-none"
                 style={{ left: `${sliderPosition}%` }}
-                onMouseDown={(e) => {
-                  const onMove = (moveEvt) => handleSliderMove(moveEvt);
-                  const onUp = () => {
-                    window.removeEventListener('mousemove', onMove);
-                    window.removeEventListener('mouseup', onUp);
-                  };
-                  window.addEventListener('mousemove', onMove);
-                  window.addEventListener('mouseup', onUp);
-                }}
+                onPointerDown={handlePointerDown}
+                onPointerMove={handlePointerMove}
+                onPointerUp={handlePointerUp}
+                onPointerCancel={handlePointerUp}
               >
-                <div className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 w-8 h-8 rounded-full bg-white text-slate-950 font-bold shadow-2xl flex items-center justify-center text-xs border border-slate-300 hover:scale-110 transition">
-                  ↔
+                {/* Center Draggable Handle Pill */}
+                <div className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 px-2.5 py-1 rounded-full bg-slate-900/95 text-white font-semibold text-[10px] shadow-2xl flex items-center space-x-1.5 border border-amber-500/60 hover:scale-105 active:scale-95 transition cursor-ew-resize select-none pointer-events-none">
+                  <span className="text-slate-400 font-medium">Before</span>
+                  <span className="text-amber-400 font-bold">↔</span>
+                  <span className="text-emerald-400 font-medium">After</span>
                 </div>
               </div>
             )}

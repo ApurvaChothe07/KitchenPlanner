@@ -17,6 +17,7 @@ export const RealisticScene3D = forwardRef(({
   calibration = { scale: 1, offsetX: 0, offsetY: 0, offsetZ: 0, rotationY: 0 },
   selectedCabinetId = null,
   onSelectCabinet,
+  isOrbitEnabled = true,
   onCameraChange
 }, ref) => {
   const controlsRef = useRef(null);
@@ -305,6 +306,7 @@ export const RealisticScene3D = forwardRef(({
       <OrbitControls
         ref={controlsRef}
         makeDefault
+        enabled={isOrbitEnabled}
         target={[0, 1.2, 0]}
         minDistance={0.5}
         maxDistance={25}
