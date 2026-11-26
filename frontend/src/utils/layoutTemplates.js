@@ -205,6 +205,7 @@ export const generateLayoutCabinets = (layoutType, roomWidthMm, roomLengthMm, ro
       // Corner connection: Back Wall (X) + Left Wall (Y)
 
       // --- Left Wall Run (along X = 0, moving down Y) ---
+      // Handles face EAST (opposite to left wall), rotation: 270
       // 1. Tall Unit at bottom-left corner
       cabinets.push(
         createCab({
@@ -215,7 +216,8 @@ export const generateLayoutCabinets = (layoutType, roomWidthMm, roomLengthMm, ro
           posX: 0,
           posY: Math.min(roomLengthMm - 600, 1800),
           finishColor: '#1e293b',
-          notes: 'Pantry tall tower'
+          notes: 'Pantry tall tower',
+          rotation: 270
         })
       );
 
@@ -229,7 +231,8 @@ export const generateLayoutCabinets = (layoutType, roomWidthMm, roomLengthMm, ro
           posX: 0,
           posY: 1200,
           finishColor: '#0284c7',
-          notes: 'Sink workstation'
+          notes: 'Sink workstation',
+          rotation: 270
         })
       );
 
@@ -242,7 +245,8 @@ export const generateLayoutCabinets = (layoutType, roomWidthMm, roomLengthMm, ro
           heightMm: 860,
           posX: 0,
           posY: 600,
-          finishColor: '#38bdf8'
+          finishColor: '#38bdf8',
+          rotation: 270
         })
       );
       // Wall unit above left prep
@@ -255,7 +259,8 @@ export const generateLayoutCabinets = (layoutType, roomWidthMm, roomLengthMm, ro
           posX: 0,
           posY: 600,
           posZ: 1450,
-          finishColor: '#94a3b8'
+          finishColor: '#94a3b8',
+          rotation: 270
         })
       );
 
@@ -269,11 +274,13 @@ export const generateLayoutCabinets = (layoutType, roomWidthMm, roomLengthMm, ro
           posX: 0,
           posY: 0,
           finishColor: '#475569',
-          notes: 'L-corner blind transition base'
+          notes: 'L-corner blind transition base',
+          rotation: 0
         })
       );
 
       // --- Back Wall Run (along Y = 0, moving right along X) ---
+      // Handles face SOUTH (opposite to top wall), rotation: 0
       // Drawer Base
       cabinets.push(
         createCab({
@@ -283,7 +290,8 @@ export const generateLayoutCabinets = (layoutType, roomWidthMm, roomLengthMm, ro
           heightMm: 860,
           posX: 600,
           posY: 0,
-          finishColor: '#64748b'
+          finishColor: '#64748b',
+          rotation: 0
         })
       );
       cabinets.push(
@@ -295,7 +303,8 @@ export const generateLayoutCabinets = (layoutType, roomWidthMm, roomLengthMm, ro
           posX: 600,
           posY: 0,
           posZ: 1450,
-          finishColor: '#94a3b8'
+          finishColor: '#94a3b8',
+          rotation: 0
         })
       );
 
@@ -309,7 +318,8 @@ export const generateLayoutCabinets = (layoutType, roomWidthMm, roomLengthMm, ro
           posX: 1200,
           posY: 0,
           finishColor: '#f97316',
-          notes: 'Hob cooktop station'
+          notes: 'Hob cooktop station',
+          rotation: 0
         })
       );
       cabinets.push(
@@ -321,7 +331,8 @@ export const generateLayoutCabinets = (layoutType, roomWidthMm, roomLengthMm, ro
           posX: 1200,
           posY: 0,
           posZ: 1450,
-          finishColor: '#cbd5e1'
+          finishColor: '#cbd5e1',
+          rotation: 0
         })
       );
 
@@ -334,7 +345,8 @@ export const generateLayoutCabinets = (layoutType, roomWidthMm, roomLengthMm, ro
           heightMm: 860,
           posX: 2100,
           posY: 0,
-          finishColor: '#38bdf8'
+          finishColor: '#38bdf8',
+          rotation: 0
         })
       );
       break;
@@ -343,7 +355,7 @@ export const generateLayoutCabinets = (layoutType, roomWidthMm, roomLengthMm, ro
     case 'U_SHAPED': {
       const rightX = Math.max(1800, roomWidthMm - 600);
 
-      // Left Wall Run (Wet Prep Run)
+      // Left Wall Run (Wet Prep Run) - Handles face EAST, rotation: 270
       cabinets.push(
         createCab({
           cabinetType: 'BASE',
@@ -352,7 +364,8 @@ export const generateLayoutCabinets = (layoutType, roomWidthMm, roomLengthMm, ro
           heightMm: 860,
           posX: 0,
           posY: 1200,
-          finishColor: '#38bdf8'
+          finishColor: '#38bdf8',
+          rotation: 270
         })
       );
       cabinets.push(
@@ -363,7 +376,8 @@ export const generateLayoutCabinets = (layoutType, roomWidthMm, roomLengthMm, ro
           heightMm: 860,
           posX: 0,
           posY: 600,
-          finishColor: '#38bdf8'
+          finishColor: '#38bdf8',
+          rotation: 270
         })
       );
       cabinets.push(
@@ -375,7 +389,8 @@ export const generateLayoutCabinets = (layoutType, roomWidthMm, roomLengthMm, ro
           posX: 0,
           posY: 600,
           posZ: 1450,
-          finishColor: '#94a3b8'
+          finishColor: '#94a3b8',
+          rotation: 270
         })
       );
 
@@ -388,11 +403,12 @@ export const generateLayoutCabinets = (layoutType, roomWidthMm, roomLengthMm, ro
           heightMm: 860,
           posX: 0,
           posY: 0,
-          finishColor: '#475569'
+          finishColor: '#475569',
+          rotation: 0
         })
       );
 
-      // Back Wall Run (Sink in center under window)
+      // Back Wall Run (Sink in center under window) - Handles face SOUTH, rotation: 0
       const sinkX = Math.round((roomWidthMm - 900) / 2);
       cabinets.push(
         createCab({
@@ -402,7 +418,8 @@ export const generateLayoutCabinets = (layoutType, roomWidthMm, roomLengthMm, ro
           heightMm: 860,
           posX: 600,
           posY: 0,
-          finishColor: '#64748b'
+          finishColor: '#64748b',
+          rotation: 0
         })
       );
       cabinets.push(
@@ -413,7 +430,8 @@ export const generateLayoutCabinets = (layoutType, roomWidthMm, roomLengthMm, ro
           heightMm: 860,
           posX: Math.max(1200, sinkX),
           posY: 0,
-          finishColor: '#0284c7'
+          finishColor: '#0284c7',
+          rotation: 0
         })
       );
 
@@ -426,11 +444,12 @@ export const generateLayoutCabinets = (layoutType, roomWidthMm, roomLengthMm, ro
           heightMm: 860,
           posX: rightX,
           posY: 0,
-          finishColor: '#475569'
+          finishColor: '#475569',
+          rotation: 0
         })
       );
 
-      // Right Wall Run (Cooking / Hob Run)
+      // Right Wall Run (Cooking / Hob Run) - Handles face WEST, rotation: 90
       cabinets.push(
         createCab({
           cabinetType: 'HOB_BASE',
@@ -439,7 +458,8 @@ export const generateLayoutCabinets = (layoutType, roomWidthMm, roomLengthMm, ro
           heightMm: 860,
           posX: rightX,
           posY: 600,
-          finishColor: '#f97316'
+          finishColor: '#f97316',
+          rotation: 90
         })
       );
       cabinets.push(
@@ -451,7 +471,8 @@ export const generateLayoutCabinets = (layoutType, roomWidthMm, roomLengthMm, ro
           posX: rightX,
           posY: 1200,
           finishColor: '#1e293b',
-          notes: 'Built-in oven / microwave tower'
+          notes: 'Built-in oven / microwave tower',
+          rotation: 90
         })
       );
       break;
@@ -460,7 +481,7 @@ export const generateLayoutCabinets = (layoutType, roomWidthMm, roomLengthMm, ro
     case 'PARALLEL': {
       const rightX = Math.max(1800, roomWidthMm - 600);
 
-      // Left Run: Wet Zone & Preparation (Sink & Drawers)
+      // Left Run: Wet Zone & Preparation - Handles face EAST, rotation: 270
       cabinets.push(
         createCab({
           cabinetType: 'BASE',
@@ -469,7 +490,8 @@ export const generateLayoutCabinets = (layoutType, roomWidthMm, roomLengthMm, ro
           heightMm: 860,
           posX: 0,
           posY: 300,
-          finishColor: '#38bdf8'
+          finishColor: '#38bdf8',
+          rotation: 270
         })
       );
       cabinets.push(
@@ -481,7 +503,8 @@ export const generateLayoutCabinets = (layoutType, roomWidthMm, roomLengthMm, ro
           posX: 0,
           posY: 300,
           posZ: 1450,
-          finishColor: '#94a3b8'
+          finishColor: '#94a3b8',
+          rotation: 270
         })
       );
 
@@ -493,7 +516,8 @@ export const generateLayoutCabinets = (layoutType, roomWidthMm, roomLengthMm, ro
           heightMm: 860,
           posX: 0,
           posY: 900,
-          finishColor: '#0284c7'
+          finishColor: '#0284c7',
+          rotation: 270
         })
       );
       cabinets.push(
@@ -505,7 +529,8 @@ export const generateLayoutCabinets = (layoutType, roomWidthMm, roomLengthMm, ro
           posX: 0,
           posY: 900,
           posZ: 1450,
-          finishColor: '#cbd5e1'
+          finishColor: '#cbd5e1',
+          rotation: 270
         })
       );
 
@@ -517,11 +542,12 @@ export const generateLayoutCabinets = (layoutType, roomWidthMm, roomLengthMm, ro
           heightMm: 860,
           posX: 0,
           posY: 1500,
-          finishColor: '#64748b'
+          finishColor: '#64748b',
+          rotation: 270
         })
       );
 
-      // Right Run: Hot Cooking & Storage (Hob & Tall Tower)
+      // Right Run: Hot Cooking & Storage - Handles face WEST, rotation: 90
       cabinets.push(
         createCab({
           cabinetType: 'BASE',
@@ -530,7 +556,8 @@ export const generateLayoutCabinets = (layoutType, roomWidthMm, roomLengthMm, ro
           heightMm: 860,
           posX: rightX,
           posY: 300,
-          finishColor: '#38bdf8'
+          finishColor: '#38bdf8',
+          rotation: 90
         })
       );
       cabinets.push(
@@ -541,7 +568,8 @@ export const generateLayoutCabinets = (layoutType, roomWidthMm, roomLengthMm, ro
           heightMm: 860,
           posX: rightX,
           posY: 900,
-          finishColor: '#f97316'
+          finishColor: '#f97316',
+          rotation: 90
         })
       );
       cabinets.push(
@@ -553,7 +581,8 @@ export const generateLayoutCabinets = (layoutType, roomWidthMm, roomLengthMm, ro
           posX: rightX,
           posY: 1500,
           finishColor: '#1e293b',
-          notes: 'Pantry storage tower'
+          notes: 'Pantry storage tower',
+          rotation: 90
         })
       );
       break;
@@ -715,8 +744,11 @@ export const autoArrangeExistingCabinets = (
   const arranged = [];
 
   const placeCab = (cab, posX, posY, posZ = 0, rotation = 0) => {
-    const maxX = Math.max(0, roomWidthMm - cab.widthMm);
-    const maxY = Math.max(0, roomLengthMm - cab.depthMm);
+    const isRot = rotation === 90 || rotation === 270;
+    const effW = isRot ? cab.depthMm : cab.widthMm;
+    const effD = isRot ? cab.widthMm : cab.depthMm;
+    const maxX = Math.max(0, roomWidthMm - effW);
+    const maxY = Math.max(0, roomLengthMm - effD);
     arranged.push({
       ...cab,
       posX: Math.max(0, Math.min(Math.round(posX / 50) * 50, maxX)),
@@ -740,6 +772,7 @@ export const autoArrangeExistingCabinets = (
   switch (layoutType) {
     case 'STRAIGHT': {
       // Linear run along Top/Back wall (posY = 0)
+      // Handles face SOUTH (opposite to top wall), rotation: 0
       let curX = 0;
       floorUnits.forEach((cab) => {
         if (curX + cab.widthMm > roomWidthMm && curX > 0) {
@@ -767,9 +800,7 @@ export const autoArrangeExistingCabinets = (
     }
 
     case 'L_SHAPED': {
-      // Corner junction at (0, 0)
-      // Run 1: Left wall along Y (posX = 0)
-      // Run 2: Top wall along X (posY = 0)
+      // Corner connection: Left wall (X = 0) + Top wall (Y = 0)
       const leftUnits = [];
       const topUnits = [];
 
@@ -782,13 +813,15 @@ export const autoArrangeExistingCabinets = (
       });
 
       // Left Run along X = 0 (moving down Y)
+      // Back flush against left wall, handles face EAST (opposite to left wall), rotation = 270
       let curY = 0;
       leftUnits.forEach((cab) => {
-        placeCab(cab, 0, curY, 0, 0);
-        curY += cab.depthMm || cab.widthMm || 600;
+        placeCab(cab, 0, curY, 0, 270);
+        curY += cab.widthMm;
       });
 
       // Top Run along Y = 0 (moving right along X, starting after left corner 600mm)
+      // Back flush against top wall, handles face SOUTH (opposite to top wall), rotation = 0
       let curX = 600;
       topUnits.forEach((cab) => {
         placeCab(cab, curX, 0, 0, 0);
@@ -797,21 +830,20 @@ export const autoArrangeExistingCabinets = (
 
       // Wall units: alternating between Top wall and Left wall
       let wallX = 600;
-      let wallY = 600;
+      let wallY = 0;
       wallUnits.forEach((cab, idx) => {
         if (idx % 2 === 0) {
           placeCab(cab, wallX, 0, wallElevZ, 0);
           wallX += cab.widthMm;
         } else {
-          placeCab(cab, 0, wallY, wallElevZ, 0);
-          wallY += cab.depthMm || cab.widthMm || 600;
+          placeCab(cab, 0, wallY, wallElevZ, 270);
+          wallY += cab.widthMm;
         }
       });
       break;
     }
 
     case 'U_SHAPED': {
-      const rightX = Math.max(1200, roomWidthMm - 600);
       const runs = [[], [], []]; // 0: Left, 1: Top (Back), 2: Right
 
       floorUnits.forEach((cab, idx) => {
@@ -825,13 +857,15 @@ export const autoArrangeExistingCabinets = (
       });
 
       // Left Run (X = 0, moving down Y)
+      // Back flush against left wall, handles face EAST (opposite to left wall), rotation = 270
       let leftY = 0;
       runs[0].forEach((cab) => {
-        placeCab(cab, 0, leftY, 0, 0);
-        leftY += cab.depthMm || 600;
+        placeCab(cab, 0, leftY, 0, 270);
+        leftY += cab.widthMm;
       });
 
       // Top Run (Y = 0, moving right along X starting after left corner 600)
+      // Back flush against top wall, handles face SOUTH (opposite to top wall), rotation = 0
       let topX = 600;
       runs[1].forEach((cab) => {
         placeCab(cab, topX, 0, 0, 0);
@@ -839,34 +873,36 @@ export const autoArrangeExistingCabinets = (
       });
 
       // Right Run (X = rightX, moving down Y)
+      // Back flush against right wall, handles face WEST (opposite to right wall), rotation = 90
       let rightY = 0;
       runs[2].forEach((cab) => {
-        placeCab(cab, rightX, rightY, 0, 0);
-        rightY += cab.depthMm || 600;
+        const rightX = Math.max(0, roomWidthMm - cab.depthMm);
+        placeCab(cab, rightX, rightY, 0, 90);
+        rightY += cab.widthMm;
       });
 
       // Distribute wall units across the 3 walls
-      let wLeftY = 600;
+      let wLeftY = 0;
       let wTopX = 600;
-      let wRightY = 600;
+      let wRightY = 0;
       wallUnits.forEach((cab, idx) => {
         const targetRun = idx % 3;
         if (targetRun === 0) {
-          placeCab(cab, 0, wLeftY, wallElevZ, 0);
-          wLeftY += cab.depthMm || 600;
+          placeCab(cab, 0, wLeftY, wallElevZ, 270);
+          wLeftY += cab.widthMm;
         } else if (targetRun === 1) {
           placeCab(cab, wTopX, 0, wallElevZ, 0);
           wTopX += cab.widthMm;
         } else {
-          placeCab(cab, rightX, wRightY, wallElevZ, 0);
-          wRightY += cab.depthMm || 600;
+          const rightX = Math.max(0, roomWidthMm - cab.depthMm);
+          placeCab(cab, rightX, wRightY, wallElevZ, 90);
+          wRightY += cab.widthMm;
         }
       });
       break;
     }
 
     case 'PARALLEL': {
-      const rightX = Math.max(1200, roomWidthMm - 600);
       const leftRun = [];
       const rightRun = [];
 
@@ -882,16 +918,19 @@ export const autoArrangeExistingCabinets = (
         }
       });
 
+      // Left Run: Back against left wall, handles face EAST (opposite to left wall), rotation = 270
       let leftY = 100;
       leftRun.forEach((cab) => {
-        placeCab(cab, 0, leftY, 0, 0);
-        leftY += cab.depthMm || 600;
+        placeCab(cab, 0, leftY, 0, 270);
+        leftY += cab.widthMm;
       });
 
+      // Right Run: Back against right wall, handles face WEST (opposite to right wall), rotation = 90
       let rightY = 100;
       rightRun.forEach((cab) => {
-        placeCab(cab, rightX, rightY, 0, 0);
-        rightY += cab.depthMm || 600;
+        const rightX = Math.max(0, roomWidthMm - cab.depthMm);
+        placeCab(cab, rightX, rightY, 0, 90);
+        rightY += cab.widthMm;
       });
 
       // Wall units along left and right runs
@@ -899,11 +938,12 @@ export const autoArrangeExistingCabinets = (
       let wRightY = 100;
       wallUnits.forEach((cab, idx) => {
         if (idx % 2 === 0) {
-          placeCab(cab, 0, wLeftY, wallElevZ, 0);
-          wLeftY += cab.depthMm || 600;
+          placeCab(cab, 0, wLeftY, wallElevZ, 270);
+          wLeftY += cab.widthMm;
         } else {
-          placeCab(cab, rightX, wRightY, wallElevZ, 0);
-          wRightY += cab.depthMm || 600;
+          const rightX = Math.max(0, roomWidthMm - cab.depthMm);
+          placeCab(cab, rightX, wRightY, wallElevZ, 90);
+          wRightY += cab.widthMm;
         }
       });
       break;
@@ -924,6 +964,7 @@ export const autoArrangeExistingCabinets = (
       });
 
       // Perimeter Run along Top Wall (Y = 0)
+      // Handles face SOUTH (opposite to top wall), rotation = 0
       let perimX = 100;
       perimeterUnits.forEach((cab) => {
         placeCab(cab, perimX, 0, 0, 0);

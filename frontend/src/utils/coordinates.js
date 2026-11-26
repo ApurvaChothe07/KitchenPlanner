@@ -15,10 +15,13 @@ export const snapToGridMm = (valMm, stepMm = 50) => {
   return Math.round(valMm / stepMm) * stepMm;
 };
 
-// Clamp cabinet position within room walls (in mm)
-export const clampWithinRoom = (posX, posY, widthMm, depthMm, roomWidthMm, roomLengthMm) => {
-  const maxX = Math.max(0, roomWidthMm - widthMm);
-  const maxY = Math.max(0, roomLengthMm - depthMm);
+// Clamp cabinet position within room walls (in mm), taking rotation into account
+export const clampWithinRoom = (posX, posY, widthMm, depthMm, roomWidthMm, roomLengthMm, rotation = 0) => {
+  const isRotated = rotation === 90 || rotation === 270;
+  const effW = isRotated ? depthMm : widthMm;
+  const effD = isRotated ? widthMm : depthMm;
+  const maxX = Math.max(0, roomWidthMm - effW);
+  const maxY = Math.max(0, roomLengthMm - effD);
   return {
     posX: Math.max(0, Math.min(posX, maxX)),
     posY: Math.max(0, Math.min(posY, maxY))
@@ -29,6 +32,7 @@ export const clampWithinRoom = (posX, posY, widthMm, depthMm, roomWidthMm, roomL
  * Axis-Aligned Bounding Box (AABB) 2D Collision Detection
  * Checks if cabinetA and cabinetB overlap in floor space.
  * Wall cabinets (Z >= 1400mm) do not collide with Base cabinets (Z < 1000mm).
+ * Takes cabinet rotation into account for effective footprint.
  */
 export const isCabinetColliding = (cabA, cabB) => {
   if (cabA.id === cabB.id) return false;
@@ -40,16 +44,24 @@ export const isCabinetColliding = (cabA, cabB) => {
     return false; // Different vertical levels (countertop vs overhead)
   }
 
+  const isARot = cabA.rotation === 90 || cabA.rotation === 270;
+  const aW = isARot ? cabA.depthMm : cabA.widthMm;
+  const aD = isARot ? cabA.widthMm : cabA.depthMm;
+
+  const isBRot = cabB.rotation === 90 || cabB.rotation === 270;
+  const bW = isBRot ? cabB.depthMm : cabB.widthMm;
+  const bD = isBRot ? cabB.widthMm : cabB.depthMm;
+
   // 2D floor AABB check
   const aLeft = cabA.posX;
-  const aRight = cabA.posX + cabA.widthMm;
+  const aRight = cabA.posX + aW;
   const aTop = cabA.posY;
-  const aBottom = cabA.posY + cabA.depthMm;
+  const aBottom = cabA.posY + aD;
 
   const bLeft = cabB.posX;
-  const bRight = cabB.posX + cabB.widthMm;
+  const bRight = cabB.posX + bW;
   const bTop = cabB.posY;
-  const bBottom = cabB.posY + cabB.depthMm;
+  const bBottom = cabB.posY + bD;
 
   return (aLeft < bRight && aRight > bLeft && aTop < bBottom && aBottom > bTop);
 };
@@ -62,6 +74,7 @@ export const findCollisions = (targetCabinet, allCabinets) => {
 /**
  * 2D (mm, top-left room origin) to 3D (metres, centered room origin) Coordinate Transform
  * Converts millimeter cabinet position and dimensions into centered Three.js world space coordinates.
+ * Handles rotated cabinet footprints so the 3D center matches 2D floor position exactly.
  */
 export const to3DCoordinates = (cabinet, roomWidthMm, roomLengthMm) => {
   const roomWm = roomWidthMm / 1000;
@@ -72,9 +85,13 @@ export const to3DCoordinates = (cabinet, roomWidthMm, roomLengthMm) => {
   const depthM = cabinet.depthMm / 1000;
   const heightM = cabinet.heightMm / 1000;
 
+  const isRotated = cabinet.rotation === 90 || cabinet.rotation === 270;
+  const effWidthMm = isRotated ? cabinet.depthMm : cabinet.widthMm;
+  const effDepthMm = isRotated ? cabinet.widthMm : cabinet.depthMm;
+
   // 2D center point in mm from top-left room origin
-  const centerXMm = cabinet.posX + cabinet.widthMm / 2;
-  const centerYMm = cabinet.posY + cabinet.depthMm / 2;
+  const centerXMm = cabinet.posX + effWidthMm / 2;
+  const centerYMm = cabinet.posY + effDepthMm / 2;
   const centerZElevationMm = (cabinet.posZ || 0) + cabinet.heightMm / 2;
 
   // Transform to 3D world space in metres (room centered on X and Z, Y sits on floor = 0)
@@ -110,13 +127,17 @@ export const from3DCoordinates = (
   const roomWm = roomWidthMm / 1000;
   const roomLm = roomLengthMm / 1000;
 
+  const isRotated = cabinet.rotation === 90 || cabinet.rotation === 270;
+  const effWidthMm = isRotated ? cabinet.depthMm : cabinet.widthMm;
+  const effDepthMm = isRotated ? cabinet.widthMm : cabinet.depthMm;
+
   // Inverse X transform: centerXMm / 1000 - roomWm / 2 = xM
   const centerXMm = (xM + roomWm / 2) * 1000;
-  let posX = Math.round(centerXMm - cabinet.widthMm / 2);
+  let posX = Math.round(centerXMm - effWidthMm / 2);
 
   // Inverse Z transform: centerYMm / 1000 - roomLm / 2 = zM
   const centerYMm = (zM + roomLm / 2) * 1000;
-  let posY = Math.round(centerYMm - cabinet.depthMm / 2);
+  let posY = Math.round(centerYMm - effDepthMm / 2);
 
   // Inverse Y elevation transform: (posZ + heightMm / 2) / 1000 = yM
   const centerZElevationMm = yM * 1000;
@@ -145,7 +166,8 @@ export const from3DCoordinates = (
     cabinet.widthMm,
     cabinet.depthMm,
     roomWidthMm,
-    roomLengthMm
+    roomLengthMm,
+    cabinet.rotation || 0
   );
 
   return {

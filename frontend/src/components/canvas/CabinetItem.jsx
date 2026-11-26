@@ -24,8 +24,14 @@ export const CabinetItem = ({
 }) => {
   const groupRef = useRef(null);
 
+  const isRotated = cabinet.rotation === 90 || cabinet.rotation === 270;
+  const effWidthMm = isRotated ? cabinet.depthMm : cabinet.widthMm;
+  const effDepthMm = isRotated ? cabinet.widthMm : cabinet.depthMm;
+
   const widthPx = mmToPx(cabinet.widthMm, scale);
   const depthPx = mmToPx(cabinet.depthMm, scale);
+  const effWidthPx = mmToPx(effWidthMm, scale);
+  const effDepthPx = mmToPx(effDepthMm, scale);
   const xPx = mmToPx(cabinet.posX, scale);
   const yPx = mmToPx(cabinet.posY, scale);
 
@@ -39,9 +45,12 @@ export const CabinetItem = ({
     const rawX = e.target.x();
     const rawY = e.target.y();
 
-    // Convert pixels back to millimetres
-    let mmX = pxToMm(rawX, scale);
-    let mmY = pxToMm(rawY, scale);
+    // Group pivot is centered at (xPx + effWidthPx / 2, yPx + effDepthPx / 2)
+    const centerXMm = pxToMm(rawX, scale);
+    const centerYMm = pxToMm(rawY, scale);
+
+    let mmX = Math.round(centerXMm - effWidthMm / 2);
+    let mmY = Math.round(centerYMm - effDepthMm / 2);
 
     // Snap to 50mm grid
     mmX = snapToGridMm(mmX, 50);
@@ -54,12 +63,13 @@ export const CabinetItem = ({
       cabinet.widthMm,
       cabinet.depthMm,
       roomWidthMm,
-      roomLengthMm
+      roomLengthMm,
+      cabinet.rotation || 0
     );
 
-    // Reset visual konva position to exact clamped/snapped pixel value
-    e.target.x(mmToPx(clamped.posX, scale));
-    e.target.y(mmToPx(clamped.posY, scale));
+    // Reset visual konva position to exact clamped/snapped pixel center
+    e.target.x(mmToPx(clamped.posX + effWidthMm / 2, scale));
+    e.target.y(mmToPx(clamped.posY + effDepthMm / 2, scale));
 
     onMove(cabinet.id, clamped.posX, clamped.posY);
   };
@@ -67,8 +77,10 @@ export const CabinetItem = ({
   return (
     <Group
       ref={groupRef}
-      x={xPx}
-      y={yPx}
+      x={xPx + effWidthPx / 2}
+      y={yPx + effDepthPx / 2}
+      offsetX={widthPx / 2}
+      offsetY={depthPx / 2}
       rotation={cabinet.rotation || 0}
       draggable
       onClick={(e) => {

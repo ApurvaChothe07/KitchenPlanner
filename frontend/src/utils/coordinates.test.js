@@ -11,7 +11,7 @@ import {
   from3DRotation,
   PREDEFINED_CABINETS
 } from './coordinates.js';
-import { autoArrangeExistingCabinets } from './layoutTemplates.js';
+import { autoArrangeExistingCabinets, generateLayoutCabinets } from './layoutTemplates.js';
 
 console.log('Running 2D Kitchen Editor Coordinates & Physics Verification...');
 
@@ -160,17 +160,50 @@ const userAddedCabinets = [
     const original = userAddedCabinets.find((u) => u.id === cab.id);
     assert.ok(original, `Original cabinet ${cab.id} must exist in arranged output`);
     assert.strictEqual(cab.finishColor, original.finishColor, `Custom color on cab ${cab.id} must be preserved`);
-    // Verify within room boundaries
-    assert.ok(cab.posX >= 0 && cab.posX <= 4500 - cab.widthMm, `Cabinet ${cab.id} posX (${cab.posX}) must be within room`);
-    assert.ok(cab.posY >= 0 && cab.posY <= 3600 - cab.depthMm, `Cabinet ${cab.id} posY (${cab.posY}) must be within room`);
+    
+    // Verify within room boundaries based on effective rotated footprint
+    const isRot = cab.rotation === 90 || cab.rotation === 270;
+    const effW = isRot ? cab.depthMm : cab.widthMm;
+    const effD = isRot ? cab.widthMm : cab.depthMm;
+    assert.ok(cab.posX >= 0 && cab.posX <= 4500 - effW, `Cabinet ${cab.id} posX (${cab.posX}) must be within room`);
+    assert.ok(cab.posY >= 0 && cab.posY <= 3600 - effD, `Cabinet ${cab.id} posY (${cab.posY}) must be within room`);
+
     // Verify wall elevation
     if (cab.cabinetType === 'WALL') {
       assert.ok(cab.posZ >= 1200, `Wall cabinet ${cab.id} posZ (${cab.posZ}) must be at overhead elevation`);
     } else {
       assert.strictEqual(cab.posZ, 0, `Floor cabinet ${cab.id} posZ must be 0`);
     }
+
+    // Verify wall alignment and handle orientation (handles facing opposite to wall)
+    if (cab.posX === 0 && cab.posY > 0) {
+      // Left wall run: handles must face EAST (opposite to left wall) -> 270°
+      assert.strictEqual(cab.rotation, 270, `Cabinet ${cab.id} on Left wall in ${layout} must have rotation 270° so handles face into room`);
+    } else if (cab.posX >= 4500 - 650) {
+      // Right wall run: handles must face WEST (opposite to right wall) -> 90°
+      assert.strictEqual(cab.rotation, 90, `Cabinet ${cab.id} on Right wall in ${layout} must have rotation 90° so handles face into room`);
+    } else if (cab.posY === 0 && cab.posX > 0) {
+      // Top wall run: handles must face SOUTH (opposite to top wall) -> 0°
+      assert.strictEqual(cab.rotation, 0, `Cabinet ${cab.id} on Top wall in ${layout} must have rotation 0° so handles face into room`);
+    }
   });
 });
 console.log('✓ Auto-arrange for dynamically added components across all 5 layout shapes verified');
+
+// 9. Starter Template Layouts Verification (Handles and Wall Alignment)
+['STRAIGHT', 'L_SHAPED', 'U_SHAPED', 'PARALLEL', 'ISLAND'].forEach((layout) => {
+  const starter = generateLayoutCabinets(layout, 4500, 3600, 2800);
+  assert.ok(starter.length >= 4, `Starter template for ${layout} must contain components`);
+  starter.forEach((cab) => {
+    if (cab.posX === 0 && cab.posY > 0) {
+      assert.strictEqual(cab.rotation, 270, `Starter ${cab.id} on Left wall in ${layout} must have rotation 270°`);
+    } else if (cab.posX >= 4500 - 650 && cab.posY > 0) {
+      assert.strictEqual(cab.rotation, 90, `Starter ${cab.id} on Right wall in ${layout} must have rotation 90°`);
+    } else if (cab.posY === 0 && cab.posX > 0 && cab.posX < 4500 - 650) {
+      assert.strictEqual(cab.rotation, 0, `Starter ${cab.id} on Top wall in ${layout} must have rotation 0°`);
+    }
+  });
+});
+console.log('✓ Starter templates handle orientation opposite to active walls verified');
 
 console.log('\nALL 2D AND 3D COORDINATE TESTS PASSED SUCCESSFULLY!');
